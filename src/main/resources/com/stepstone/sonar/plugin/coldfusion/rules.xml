@@ -657,4 +657,68 @@
         <cardinality>SINGLE</cardinality>
         <description><![CDATA[ <p>Unquoted struct key variable is not case-sensitive. Using array notation is recommended.</p> ]]></description>
     </rule>
+    <rule>
+        <key>IMPLICIT_SCOPE</key>
+        <name>Avoid using implicit scopes</name>
+        <severity>MINOR</severity>
+        <cardinality>SINGLE</cardinality>
+        <description><![CDATA[ <p>Avoid using implicit scopes.</p> ]]></description>
+    </rule>
+    <rule>
+        <key>AVOID_USING_CFCOOKIE_TAG</key>
+        <name>Avoid using CFCookie</name>
+        <severity>MINOR</severity>
+        <cardinality>SINGLE</cardinality>
+        <description><![CDATA[ <p>Avoid using CFCookie.</p> ]]></description>
+    </rule>
+    <rule>
+        <key>AVOID_USING_CFHTTP_TAG</key>
+        <name>Avoid using CFHttp</name>
+        <severity>MINOR</severity>
+        <cardinality>SINGLE</cardinality>
+        <description><![CDATA[ <p>Avoid using CFHttp.</p> ]]></description>
+    </rule>
+    <rule>
+        <key>ADDTOKEN_ATTR</key>
+        <name>CFLocation is missing addtoken</name>
+        <severity>MINOR</severity>
+        <cardinality>SINGLE</cardinality>
+        <description><![CDATA[ <p>CFLocation is missing addtoken.</p> ]]></description>
+    </rule>
+    <rule>
+        <key>AVOID_USING_CFINVOKE_TAG</key>
+        <name>Avoid using AVOID_USING_CFINVOKE_TAG</name>
+        <severity>MINOR</severity>
+        <cardinality>SINGLE</cardinality>
+        <description><![CDATA[ <p>Avoid using AVOID_USING_CFINVOKE_TAG.</p> ]]></description>
+    </rule>
+    <rule>
+        <key>AVOID_USING_CFFORM_TAG</key>
+        <name>Avoid using CFForm</name>
+        <severity>MINOR</severity>
+        <cardinality>SINGLE</cardinality>
+        <description><![CDATA[ <p>Avoid using CFForm.</p> ]]></description>
+    </rule>
+    <rule>
+        <key>AVOID_USING_CFINPUT_TAG</key>
+        <name>Avoid using CFInput</name>
+        <severity>MINOR</severity>
+        <cardinality>SINGLE</cardinality>
+        <description><![CDATA[ <p>Avoid using CFInput.</p> ]]></description>
+    </rule>
+    <rule>
+        <key>AVOID_USING_CFFILE_TAG</key>
+        <name>Avoid using CFFile</name>
+        <severity>MINOR</severity>
+        <cardinality>SINGLE</cardinality>
+        <description><![CDATA[ <p>Avoid using CFFile.</p> ]]></description>
+    </rule>
+    <rule>
+        <key>AVOID_USING_CFDIRECTORY_TAG</key>
+        <name>Avoid using CFDirectory</name>
+        <severity>MINOR</severity>
+        <cardinality>SINGLE</cardinality>
+        <description><![CDATA[ <p>Avoid using CFDirectory.</p> ]]></description>
+    </rule>
+    
 </rules>
