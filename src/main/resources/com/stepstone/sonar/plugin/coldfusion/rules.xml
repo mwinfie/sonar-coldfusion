@@ -720,5 +720,18 @@
         <cardinality>SINGLE</cardinality>
         <description><![CDATA[ <p>Avoid using CFDirectory.</p> ]]></description>
     </rule>
-    
+    <rule>
+        <key>AVOID_USING_ISDEFINED</key>
+        <name>Avoid using IsDefined</name>
+        <severity>MAJOR</severity>
+        <cardinality>SINGLE</cardinality>
+        <description><![CDATA[ <p>Avoid using IsDefined.</p> ]]></description>
+    </rule>
+    <rule>
+        <key>AVOID_USING_EVALUATE</key>
+        <name>Avoid using Evaluate</name>
+        <severity>MAJOR</severity>
+        <cardinality>SINGLE</cardinality>
+        <description><![CDATA[ <p>Avoid using Evaluate.</p> ]]></description>
+    </rule>
 </rules>
