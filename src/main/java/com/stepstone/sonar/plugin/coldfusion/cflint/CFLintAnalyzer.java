@@ -74,7 +74,7 @@ public class CFLintAnalyzer {
 
             linter.setVerbose(true);
             
-            linter.setThreaded(true);
+            // linter.setThreaded(true);
 
             CFLintResult lintResult = linter.scan(filesToScan);
 
