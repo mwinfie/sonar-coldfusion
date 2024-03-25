@@ -21,3 +21,4 @@ Desktop.ini
 
 # SonarQube
 .sonar/
+.vscode/settings.json

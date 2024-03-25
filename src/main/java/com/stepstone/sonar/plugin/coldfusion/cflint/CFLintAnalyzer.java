@@ -43,6 +43,8 @@ import com.cflint.api.CFLintResult;
 import com.cflint.config.CFLintConfiguration;
 import com.cflint.config.CFLintPluginInfo;
 import com.cflint.config.ConfigBuilder;
+import com.cflint.config.ConfigFileLoader;
+import com.cflint.config.ConfigUtils;
 import com.cflint.exception.CFLintConfigurationException;
 import com.cflint.exception.CFLintScanException;
 import com.google.common.base.Preconditions;
@@ -65,11 +67,16 @@ public class CFLintAnalyzer {
     public void analyze(File configFile) throws IOException, XMLStreamException {
         List<String> filesToScan = new ArrayList<>();
 
-        for (InputFile file : fs.inputFiles(fs.predicates().hasLanguage(ColdFusionPlugin.LANGUAGE_KEY)))
+        for (InputFile file : fs.inputFiles(fs.predicates().hasLanguage(ColdFusionPlugin.LANGUAGE_KEY))) {
             filesToScan.add(file.absolutePath());
+        }
         
         try {
-            ConfigBuilder cflintConfigBuilder = new ConfigBuilder(new CFLintPluginInfo());
+            final Writer xmlwriter = createXMLWriter(fs.workDir() + File.separator + "cflint-result.xml", StandardCharsets.UTF_8);
+
+            CFLintPluginInfo cflintPluginInfo = ConfigUtils.loadDefaultPluginInfo();
+            ConfigBuilder cflintConfigBuilder = new ConfigBuilder(cflintPluginInfo);
+            
             cflintConfigBuilder.addCustomConfig(configFile.getPath());
 
             CFLintAPI linter = new CFLintAPI(
@@ -79,8 +86,10 @@ public class CFLintAnalyzer {
 
             CFLintResult lintResult = linter.scan(filesToScan);
 
-            try (final Writer xmlwriter = createXMLWriter(fs.workDir() + File.separator + "cflint-result.xml", StandardCharsets.UTF_8)) {
+            try {
                 lintResult.writeXml(xmlwriter);
+            } catch(Exception ce) {
+                throw new Exception(ce);
             }
         } catch(Exception ce) {
             throw new IOException(ce);
