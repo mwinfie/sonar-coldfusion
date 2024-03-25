@@ -13,12 +13,12 @@ import org.sonar.api.batch.fs.internal.TestInputFileBuilder;
 import org.sonar.api.batch.sensor.internal.SensorContextTester;
 import org.sonar.api.batch.sensor.measure.Measure;
 import org.sonar.api.internal.SonarRuntimeImpl;
-import org.sonar.api.internal.apachecommons.io.Charsets;
 import org.sonar.api.measures.CoreMetrics;
 import org.sonar.api.batch.rule.ActiveRules;
 import org.sonar.api.batch.rule.internal.ActiveRulesBuilder;
 import org.sonar.api.utils.Version;
-import org.sonar.api.utils.command.CommandExecutor;
+// import org.sonar.api.utils.command.CommandExecutor;
+import java.nio.charset.StandardCharsets;
 
 import java.io.File;
 
@@ -36,7 +36,7 @@ public class ColdfusionSensorTest {
     @Test
     public void testBasicCFMAnalysis() {
         DefaultFileSystem fileSystem = new DefaultFileSystem(tmpFolder.getRoot());
-        fileSystem.setEncoding(Charsets.UTF_8);
+        fileSystem.setEncoding(StandardCharsets.UTF_8);
         fileSystem.setWorkDir(tmpFolder.getRoot().toPath());
 
         context.setFileSystem(fileSystem);
@@ -45,7 +45,7 @@ public class ColdfusionSensorTest {
         context.settings().appendProperty("sonar.projectBaseDir", baseDir.getPath());
         addFilesToFs();
 
-        CommandExecutor commandExecutor = CommandExecutor.create();
+        // CommandExecutor commandExecutor = CommandExecutor.create();
         String javaHome = System.getProperty("java.home");
         Assert.assertTrue(javaHome!=null && !javaHome.equals(""));
 

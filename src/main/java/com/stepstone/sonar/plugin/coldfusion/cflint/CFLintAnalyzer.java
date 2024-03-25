@@ -25,8 +25,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
-
 import javax.xml.stream.XMLStreamException;
 
 import org.sonar.api.batch.fs.FileSystem;
@@ -34,26 +32,17 @@ import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.sensor.SensorContext;
 import org.sonar.api.config.Configuration;
 import org.sonar.api.utils.command.Command;
-import org.sonar.api.utils.command.StreamConsumer;
-import org.sonar.api.utils.log.Logger;
-import org.sonar.api.utils.log.Loggers;
-
 import com.cflint.api.CFLintAPI;
 import com.cflint.api.CFLintResult;
-import com.cflint.config.CFLintConfiguration;
 import com.cflint.config.CFLintPluginInfo;
 import com.cflint.config.ConfigBuilder;
-import com.cflint.config.ConfigFileLoader;
 import com.cflint.config.ConfigUtils;
-import com.cflint.exception.CFLintConfigurationException;
-import com.cflint.exception.CFLintScanException;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.stepstone.sonar.plugin.coldfusion.ColdFusionPlugin;
 
 public class CFLintAnalyzer {
 
-    private final Logger logger = Loggers.get(CFLintAnalyzer.class);
     private final Configuration settings;
     private final FileSystem fs;
 
@@ -82,7 +71,10 @@ public class CFLintAnalyzer {
             CFLintAPI linter = new CFLintAPI(
                 cflintConfigBuilder.build()
             );
+
             linter.setVerbose(true);
+            
+            linter.setThreaded(true);
 
             CFLintResult lintResult = linter.scan(filesToScan);
 
@@ -96,9 +88,9 @@ public class CFLintAnalyzer {
         }
     }
 
-    protected File extractCflintJar() throws IOException {
-        return new CFLintExtractor(fs.workDir()).extract();
-    }
+    // protected File extractCflintJar() throws IOException {
+    //     return new CFLintExtractor(fs.workDir()).extract();
+    // }
 
     protected void addCflintJavaOpts(Command command) {
         final String cflintJavaOpts = settings.get(ColdFusionPlugin.CFLINT_JAVA_OPTS).orElse("");
