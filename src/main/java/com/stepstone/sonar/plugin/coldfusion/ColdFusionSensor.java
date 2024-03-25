@@ -100,7 +100,11 @@ public class ColdFusionSensor implements Sensor {
 
     private void deleteFile(File configFile) throws IOException {
         if(configFile!= null){
-           Files.deleteIfExists(configFile.toPath());
+            try {
+                Files.deleteIfExists(configFile.toPath());
+            } catch ( IOException e ) {
+                LOGGER.warn(e.getMessage());
+            }
         }
     }
 
