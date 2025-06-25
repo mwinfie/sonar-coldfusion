@@ -232,6 +232,14 @@
         <tag>bug</tag>
     </rule>
     <rule>
+        <key>FUNCTION_ACCESS_REMOTE</key>
+        <name>Function has a access type of remote.</name>
+        <severity>CRITICAL</severity>
+        <cardinality>SINGLE</cardinality>
+        <description><![CDATA[ <p></p> ]]></description>
+        <tag>bug</tag>
+    </rule>
+    <rule>
         <key>EXCESSIVE_ARGUMENTS</key>
         <name>Function has too many arguments.</name>
         <severity>MAJOR</severity>
