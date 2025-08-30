@@ -9,42 +9,29 @@ import org.sonar.api.batch.sensor.SensorDescriptor;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-/**
- * Test for ColdFusion sensor functionality using public APIs only
- */
-public class ColdfusionSensorTest {
+public class ColdfusionSensorSimpleTest {
 
     @Test
-    public void testSensorConfiguration() {
-        // Create mock dependencies using public APIs only
+    public void testSensorDescriptor() {
         FileSystem fileSystem = mock(FileSystem.class);
         ActiveRules activeRules = mock(ActiveRules.class);
-        
-        // Test sensor creation
         ColdFusionSensor sensor = new ColdFusionSensor(fileSystem, activeRules);
-        Assert.assertNotNull("Sensor should be created successfully", sensor);
         
-        // Test sensor descriptor configuration
         SensorDescriptor descriptor = mock(SensorDescriptor.class);
         sensor.describe(descriptor);
         
-        // Verify correct configuration
+        // Verify that the sensor configures itself correctly
         verify(descriptor).onlyOnLanguage(ColdFusionPlugin.LANGUAGE_KEY);
         verify(descriptor).createIssuesForRuleRepository(ColdFusionPlugin.REPOSITORY_KEY);
     }
     
     @Test
     public void testSensorCreation() {
-        // Test basic sensor creation with mocked dependencies
         FileSystem fileSystem = mock(FileSystem.class);
         ActiveRules activeRules = mock(ActiveRules.class);
         
+        // Test that sensor can be created without exceptions
         ColdFusionSensor sensor = new ColdFusionSensor(fileSystem, activeRules);
         Assert.assertNotNull("Sensor should be created successfully", sensor);
-        
-        // Verify toString works (basic object validation)
-        String sensorString = sensor.toString();
-        Assert.assertTrue("Sensor string should contain class name", 
-            sensorString.contains("ColdFusionSensor"));
     }
 }

@@ -6,10 +6,10 @@
     <groupId>com.stepstone.sonar.plugin</groupId>
     <artifactId>sonar-coldfusion-plugin</artifactId>
     <packaging>sonar-plugin</packaging>
-    <version>2.4.0</version>
+    <version>3.0.0</version>
 
-    <name>SonarQube Coldfusion Plugin</name>
-    <description>Enables scanning of ColdFusion source files</description>
+    <name>SonarQube ColdFusion Plugin</name>
+    <description>CFLint 1.5.0 Plugin for SonarQube 2025.4+ - Enhanced performance and modern Plugin API 12.0 support</description>
     <url>https://github.com/cfmleditor/sonar-coldfusion</url>
 
     <organization>
@@ -37,22 +37,20 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
-        <sonar.version>9.0.0.45539</sonar.version>
-        <cflint.version>1.5.8</cflint.version>
-        <sonar-analyzer-commons.version>1.16.0.719</sonar-analyzer-commons.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        
+        <!-- Updated for SonarQube 2025.4 compatibility -->
+        <sonar.plugin.api.version>12.0.0.2960</sonar.plugin.api.version>
+        <cflint.version>1.5.0</cflint.version>
+        <sonar-analyzer-commons.version>2.18.0.3393</sonar-analyzer-commons.version>
+        
+        <!-- Plugin packaging version -->
+        <sonar-packaging-maven-plugin.version>1.23.0.740</sonar-packaging-maven-plugin.version>
     </properties>
 
-    <repositories>
-        <repository>
-            <id>github</id>
-            <name>GitHub Packages</name>
-            <url>https://maven.pkg.github.com/cfmleditor/cflint</url>
-        </repository>
-    </repositories>
-
     <dependencies>
+        <!-- Updated test dependencies -->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -61,15 +59,14 @@
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
-            <artifactId>mockito-all</artifactId>
-            <version>1.10.19</version>
+            <artifactId>mockito-core</artifactId>
+            <version>5.0.0</version>
             <scope>test</scope>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.assertj/assertj-core -->
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
-            <version>3.21.0</version>
+            <version>3.24.2</version>
             <scope>test</scope>
         </dependency>
 
@@ -97,25 +94,26 @@
             <version>${sonar-analyzer-commons.version}</version>
         </dependency>
 
-        <!-- This will be the server API-->
+        <!-- Updated Plugin API dependencies -->
         <dependency>
-            <groupId>org.sonarsource.sonarqube</groupId>
+            <groupId>org.sonarsource.api.plugin</groupId>
             <artifactId>sonar-plugin-api</artifactId>
-            <version>${sonar.version}</version>
+            <version>${sonar.plugin.api.version}</version>
             <scope>provided</scope>
         </dependency>
 
         <dependency>
-            <groupId>org.sonarsource.sonarqube</groupId>
-            <artifactId>sonar-plugin-api-impl</artifactId>
-            <version>${sonar.version}</version>
+            <groupId>org.sonarsource.api.plugin</groupId>
+            <artifactId>sonar-plugin-api-test-fixtures</artifactId>
+            <version>${sonar.plugin.api.version}</version>
             <scope>test</scope>
         </dependency>
 
+        <!-- CFLint dependency - try using maven central -->
         <dependency>
-            <groupId>com.github.cfmleditor</groupId>
-            <artifactId>cflint</artifactId>
-            <version>${cflint.version}</version>
+            <groupId>com.github.cflint</groupId>
+            <artifactId>CFLint</artifactId>
+            <version>1.5.0</version>
         </dependency> 
     </dependencies>
 
@@ -124,83 +122,27 @@
             <plugin>
                 <groupId>org.sonarsource.sonar-packaging-maven-plugin</groupId>
                 <artifactId>sonar-packaging-maven-plugin</artifactId>
-                <version>1.20.0.405</version>
+                <version>${sonar-packaging-maven-plugin.version}</version>
                 <extensions>true</extensions>
                 <configuration>
                     <pluginClass>com.stepstone.sonar.plugin.coldfusion.ColdFusionPlugin</pluginClass>
                     <pluginName>ColdFusion</pluginName>
-                    <pluginDescription>cflint ${cflint.version} Plugin for Sonarqube</pluginDescription>
+                    <pluginDescription>CFLint ${cflint.version} Plugin for SonarQube 2025.4+</pluginDescription>
                     <pluginSourcesUrl>https://github.com/cfmleditor/sonar-coldfusion</pluginSourcesUrl>
+                    <requiredForLanguages>cf</requiredForLanguages>
+                    <pluginApiMinVersion>12.0</pluginApiMinVersion>
                 </configuration>
             </plugin>
+
             <plugin>
-                <groupId>de.jutzig</groupId>
-                <artifactId>github-release-plugin</artifactId>
-                <version>1.4.0</version>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
                 <configuration>
-                    <description>Sonarqube Coldfusion Plugin release</description>
-                    <releaseName>${project.version}</releaseName>
-                    <tag>${project.version}</tag>
-                    <fileSets>
-                        <fileSet>
-                            <directory>${project.build.directory}</directory>
-                            <includes>
-                                <include>${project.artifactId}*.jar</include>
-                            </includes>
-                        </fileSet>
-                    </fileSets>
+                    <source>17</source>
+                    <target>17</target>
                 </configuration>
             </plugin>
         </plugins>
     </build>
-    <profiles>
-        <profile>
-        <id>sonar</id>
-        <properties>
-            <sonar.projectKey>stepstone-tech_sonar-coldfusion</sonar.projectKey>
-            <sonar.organization>stepstone-tech</sonar.organization>
-            <sonar.host.url>https://sonarcloud.io</sonar.host.url>
-        </properties>
-        <build>
-            <pluginManagement>
-                    <plugins>
-                        <plugin>
-                            <groupId>org.sonarsource.scanner.maven</groupId>
-                            <artifactId>sonar-maven-plugin</artifactId>
-                            <version>3.9.0.2155</version>
-                        </plugin>
-                        <plugin>
-                            <groupId>org.jacoco</groupId>
-                            <artifactId>jacoco-maven-plugin</artifactId>
-                            <version>0.8.7</version>
-                        </plugin>
-                    </plugins>
-                </pluginManagement>
-            <plugins>
-            <plugin>
-                <groupId>org.jacoco</groupId>
-                <artifactId>jacoco-maven-plugin</artifactId>
-                <executions>
-                <execution>
-                    <goals>
-                    <goal>prepare-agent</goal>
-                    </goals>
-                </execution>
-                <execution>
-                    <id>report</id>
-                    <goals>
-                    <goal>report</goal>
-                    </goals>
-                    <configuration>
-                        <excludes>
-                            <exclude>META-INF/runner/cflint.jar</exclude>
-                        </excludes>
-                    </configuration>
-                </execution>
-                </executions>
-            </plugin>
-            </plugins>
-        </build>
-        </profile>
-    </profiles>
 </project>

@@ -16,41 +16,12 @@ limitations under the License.
 
 package com.stepstone.sonar.plugin.coldfusion;
 
-import com.stepstone.sonar.plugin.coldfusion.profile.ColdFusionProfileExporter;
 import com.stepstone.sonar.plugin.coldfusion.profile.ColdFusionSonarWayProfile;
 import com.stepstone.sonar.plugin.coldfusion.rules.ColdFusionSonarRulesDefinition;
 
 import org.sonar.api.Plugin;
-import org.sonar.api.Properties;
-import org.sonar.api.Property;
+import org.sonar.api.config.PropertyDefinition;
 
-@Properties({
-        @Property(
-                key = ColdFusionPlugin.FILE_SUFFIXES_KEY,
-                defaultValue = ColdFusionPlugin.FILE_SUFFIXES_DEFVALUE,
-                name = "File suffixes",
-                description = "Comma-separated list of suffixes of files to analyze.",
-                project = true,
-                multiValues = true,
-                global = true
-        ),
-        @Property(
-                key = ColdFusionPlugin.CFLINT_JAVA,
-                defaultValue = "java",
-                name = "Java executable",
-                description = "",
-                project = true,
-                global = true
-        ),
-        @Property(
-                key = ColdFusionPlugin.CFLINT_JAVA_OPTS,
-                defaultValue = "",
-                name = "Java executable options",
-                description = "Additional parameters passed to java process. E.g. -Xmx1g",
-                project = true,
-                global = true
-        ),
-})
 public class ColdFusionPlugin implements Plugin {
 
     public static final String LANGUAGE_KEY = "cf";
@@ -71,8 +42,29 @@ public class ColdFusionPlugin implements Plugin {
                 ColdFusion.class,
                 ColdFusionSensor.class,
                 ColdFusionSonarRulesDefinition.class,
-                ColdFusionSonarWayProfile.class,
-                ColdFusionProfileExporter.class
+                ColdFusionSonarWayProfile.class
+        );
+
+        // Add property definitions programmatically
+        context.addExtensions(
+                PropertyDefinition.builder(FILE_SUFFIXES_KEY)
+                        .defaultValue(FILE_SUFFIXES_DEFVALUE)
+                        .name("File suffixes")
+                        .description("Comma-separated list of suffixes of files to analyze.")
+                        .multiValues(true)
+                        .build(),
+
+                PropertyDefinition.builder(CFLINT_JAVA)
+                        .defaultValue("java")
+                        .name("Java executable")
+                        .description("Path to the Java executable for running CFLint")
+                        .build(),
+
+                PropertyDefinition.builder(CFLINT_JAVA_OPTS)
+                        .defaultValue("")
+                        .name("Java executable options")
+                        .description("Additional parameters passed to java process. E.g. -Xmx1g")
+                        .build()
         );
     }
 }

@@ -2,6 +2,13 @@
 target/
 *.versionsBackup
 
+# Backup files and temporary artifacts
+*-backup.*
+*-original.*
+*.disabled
+*.tmp
+*~
+
 # IntelliJ IDEA
 *.iws
 *.iml
