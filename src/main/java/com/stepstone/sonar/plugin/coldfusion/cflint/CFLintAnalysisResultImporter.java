@@ -19,6 +19,7 @@ package com.stepstone.sonar.plugin.coldfusion.cflint;
 import com.stepstone.sonar.plugin.coldfusion.ColdFusionPlugin;
 import com.stepstone.sonar.plugin.coldfusion.cflint.xml.IssueAttributes;
 import com.stepstone.sonar.plugin.coldfusion.cflint.xml.LocationAttributes;
+import com.stepstone.sonar.plugin.coldfusion.cflint.include.IncludeResolver;
 
 import org.sonar.api.batch.fs.FileSystem;
 import org.sonar.api.batch.fs.InputFile;
@@ -41,12 +42,14 @@ public class CFLintAnalysisResultImporter {
 
     private final FileSystem fs;
     private final SensorContext sensorContext;
+    private final IncludeResolver includeResolver;
     private XMLStreamReader stream;
     private final Logger logger = Loggers.get(CFLintAnalysisResultImporter.class);
 
     public CFLintAnalysisResultImporter(FileSystem fs, SensorContext sensorContext) {
         this.fs = fs;
         this.sensorContext = sensorContext;
+        this.includeResolver = new IncludeResolver(fs);
     }
 
     public void parse(File file) throws IOException, XMLStreamException {
@@ -117,9 +120,21 @@ public class CFLintAnalysisResultImporter {
             return;
         }
 
-        if(locationAttributes.getLine().isPresent() && locationAttributes.getLine().get()>inputFile.lines()){
-            logger
-                .error("Problem creating issue for file {}, issue is line {} but file has {} lines", inputFile, locationAttributes.getLine().get(), inputFile.lines());
+        // Enhanced virtual line number detection and resolution
+        if(locationAttributes.getLine().isPresent() && locationAttributes.getLine().get() > inputFile.lines()){
+            logger.debug("Virtual line number detected - issue line {} > file lines {}", 
+                       locationAttributes.getLine().get(), inputFile.lines());
+            
+            // Try to resolve virtual line number using include processing
+            boolean resolved = handleIncludeProcessingIssue(issueAttributes, locationAttributes, inputFile);
+            if (resolved) {
+                logger.debug("Successfully resolved virtual line number using include processing");
+                return;
+            }
+            
+            // If resolution failed, log the error and return
+            logger.error("Problem creating issue for file {}, issue is line {} but file has {} lines", 
+                        inputFile, locationAttributes.getLine().get(), inputFile.lines());
             return;
         }
 
@@ -134,6 +149,68 @@ public class CFLintAnalysisResultImporter {
         issue.forRule(RuleKey.of(ColdFusionPlugin.REPOSITORY_KEY, issueAttributes.getId().get()));
         issue.at(issueLocation);
         issue.save();
+    }
+
+    /**
+     * Handles issues with virtual line numbers from CFLint 1.5.9's inline include processing.
+     * Attempts to resolve the virtual line number to the actual included file and line.
+     * 
+     * @param issueAttributes The issue attributes from CFLint
+     * @param locationAttributes The location attributes with virtual line number
+     * @param inputFile The main file being analyzed
+     * @return true if the issue was successfully resolved and created, false otherwise
+     */
+    private boolean handleIncludeProcessingIssue(IssueAttributes issueAttributes, 
+                                                LocationAttributes locationAttributes, 
+                                                InputFile inputFile) {
+        logger.debug("Attempting to resolve virtual line number {} in file {}", 
+                   locationAttributes.getLine().get(), inputFile.filename());
+        
+        try {
+            IncludeResolver.ResolvedLocation resolved = includeResolver.resolveVirtualLine(
+                inputFile, locationAttributes.getLine().get()
+            );
+            
+            if (resolved != null) {
+                logger.debug("Resolved to file {} line {}", 
+                           resolved.getFile().filename(), resolved.getLineNumber());
+                
+                // Create issue at the resolved location
+                final NewIssue issue = sensorContext.newIssue();
+                final NewIssueLocation issueLocation = issue.newLocation();
+                
+                issueLocation.on(resolved.getFile());
+                issueLocation.at(resolved.getFile().selectLine(resolved.getLineNumber()));
+                
+                // Enhanced message for included files
+                String originalMessage = locationAttributes.getMessage().orElse("CFLint Issue");
+                String enhancedMessage = resolved.isIncluded() 
+                    ? String.format("%s (from included file: %s)", originalMessage, resolved.getIncludeTemplate())
+                    : originalMessage;
+                    
+                issueLocation.message(enhancedMessage);
+                
+                issue.forRule(RuleKey.of(ColdFusionPlugin.REPOSITORY_KEY, issueAttributes.getId().get()));
+                issue.at(issueLocation);
+                issue.save();
+                
+                logger.debug("Created resolved issue for {} at line {} in {}", 
+                           issueAttributes.getId().orElse("unknown"), 
+                           resolved.getLineNumber(), 
+                           resolved.getFile().filename());
+                
+                return true;
+            } else {
+                logger.warn("Could not resolve virtual line number {} in file {}", 
+                           locationAttributes.getLine().get(), inputFile.filename());
+                return false;
+            }
+            
+        } catch (Exception e) {
+            logger.error("Failed to create issue for file {} at line {}: {}", 
+                        inputFile.filename(), locationAttributes.getLine().get(), e.getMessage());
+            return false;
+        }
     }
 
     private void closeXmlStream() throws XMLStreamException {

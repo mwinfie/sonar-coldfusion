@@ -9,7 +9,7 @@
     <version>3.0.0</version>
 
     <name>SonarQube ColdFusion Plugin</name>
-    <description>CFLint 1.5.0 Plugin for SonarQube 2025.4+ - Enhanced performance and modern Plugin API 12.0 support</description>
+    <description>CFLint 1.5.9 Plugin for SonarQube 2025.4+ - Enhanced performance and modern Plugin API 12.0 support with cfmleditor improvements</description>
     <url>https://github.com/cfmleditor/sonar-coldfusion</url>
 
     <organization>
@@ -42,7 +42,7 @@
         
         <!-- Updated for SonarQube 2025.4 compatibility -->
         <sonar.plugin.api.version>12.0.0.2960</sonar.plugin.api.version>
-        <cflint.version>1.5.0</cflint.version>
+        <cflint.version>1.5.9</cflint.version>
         <sonar-analyzer-commons.version>2.18.0.3393</sonar-analyzer-commons.version>
         
         <!-- Plugin packaging version -->
@@ -109,11 +109,12 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- CFLint dependency - try using maven central -->
+        <!-- CFLint dependency - cfmleditor fork 1.5.9 all-dependencies JAR -->
         <dependency>
             <groupId>com.github.cflint</groupId>
-            <artifactId>CFLint</artifactId>
-            <version>1.5.0</version>
+            <artifactId>cflint</artifactId>
+            <version>1.5.9</version>
+            <classifier>all</classifier>
         </dependency> 
     </dependencies>
 
@@ -127,7 +128,7 @@
                 <configuration>
                     <pluginClass>com.stepstone.sonar.plugin.coldfusion.ColdFusionPlugin</pluginClass>
                     <pluginName>ColdFusion</pluginName>
-                    <pluginDescription>CFLint ${cflint.version} Plugin for SonarQube 2025.4+</pluginDescription>
+                    <pluginDescription>CFLint ${cflint.version} Plugin for SonarQube 2025.4+ with Enhanced Include Processing</pluginDescription>
                     <pluginSourcesUrl>https://github.com/cfmleditor/sonar-coldfusion</pluginSourcesUrl>
                     <requiredForLanguages>cf</requiredForLanguages>
                     <pluginApiMinVersion>12.0</pluginApiMinVersion>
