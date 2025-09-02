@@ -261,13 +261,36 @@ jobs:
         export PATH="$PWD/sonar-scanner-5.0.1.3006-linux/bin:$PATH"
         echo "$PWD/sonar-scanner-5.0.1.3006-linux/bin" >> $GITHUB_PATH
 
+    - name: Create SonarQube admin token
+      run: |
+        # Wait a bit more to ensure SonarQube is fully ready
+        sleep 10
+        
+        # Create a user token for analysis
+        echo "Creating admin token for analysis..."
+        TOKEN_RESPONSE=$(curl -s -u admin:admin -X POST \
+          "http://localhost:9000/api/user_tokens/generate" \
+          -d "name=integration-test-token")
+        
+        if echo "$TOKEN_RESPONSE" | grep -q '"token"'; then
+          TOKEN=$(echo "$TOKEN_RESPONSE" | python3 -c "import sys, json; print(json.load(sys.stdin)['token'])")
+          echo "SONAR_TOKEN=$TOKEN" >> $GITHUB_ENV
+          echo "Successfully created SonarQube token"
+        else
+          echo "Failed to create token, will try with default admin credentials"
+          echo "TOKEN_RESPONSE: $TOKEN_RESPONSE"
+          echo "SONAR_TOKEN=admin" >> $GITHUB_ENV
+        fi
+
     - name: Run SonarQube analysis on test project
       run: |
         cd test-project
+        echo "Running SonarQube analysis with token..."
         sonar-scanner \
           -Dsonar.host.url=http://localhost:9000 \
-          -Dsonar.token=sqa_$(openssl rand -hex 20) \
-          -Dsonar.scm.disabled=true || echo "Analysis completed (may have issues)"
+          -Dsonar.login=${SONAR_TOKEN} \
+          -Dsonar.scm.disabled=true \
+          -X || echo "Analysis completed (may have issues)"
 
     - name: Check analysis results
       run: |
