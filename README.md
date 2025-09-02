@@ -1,17 +1,31 @@
 # SonarQube ColdFusion Plugin
 
-[![CI](https://github.com/stepstone-tech/sonar-coldfusion/actions/workflows/ci.yml/badge.svg)](https://github.com/stepstone-tech/sonar-coldfusion/actions/workflows/ci.yml) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=stepstone-tech_sonar-coldfusion&metric=alert_status)](https://sonarcloud.io/dashboard?id=stepstone-tech_sonar-coldfusion) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=stepstone-tech_sonar-coldfusion&metric=coverage)](https://sonarcloud.io/dashboard?id=stepstone-tech_sonar-coldfusion)
+[![CI/CD Pipeline](https://github.com/mwinfie/sonar-coldfusion/actions/workflows/ci.yml/badge.svg)](https://github.com/mwinfie/sonar-coldfusion/actions/workflows/ci.yml) 
+[![Nightly Build](https://github.com/mwinfie/sonar-coldfusion/actions/workflows/nightly.yml/badge.svg)](https://github.com/mwinfie/sonar-coldfusion/actions/workflows/nightly.yml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=mwinfie_sonar-coldfusion&metric=alert_status)](https://sonarcloud.io/dashboard?id=mwinfie_sonar-coldfusion) 
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=mwinfie_sonar-coldfusion&metric=coverage)](https://sonarcloud.io/dashboard?id=mwinfie_sonar-coldfusion)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=mwinfie_sonar-coldfusion&metric=security_rating)](https://sonarcloud.io/dashboard?id=mwinfie_sonar-coldfusion)
 
-A [SonarQube plugin](http://www.sonarqube.org/) for analyzing ColdFusion code, based on the [CFLint library](https://github.com/cflint/CFLint).
+A [SonarQube plugin](http://www.sonarqube.org/) for analyzing ColdFusion code, based on the [CFLint library](https://github.com/cfmleditor/CFLint).
 
-**Current Version: 3.0.0** - Updated for SonarQube 2025.4+ compatibility with enhanced performance and modern Plugin API support.
+**Current Version: 3.0.0** - Updated for SonarQube 2025.4+ compatibility with enhanced performance and modern Plugin API 12.0 support.
 
 ## Installation
 
 ### For SonarQube 2025.4+
-1. Download `sonar-coldfusion-plugin-3.0.0.jar` from the [releases section](https://github.com/stepstone-tech/sonar-coldfusion/releases) or build it yourself by cloning the code and running `mvn clean package`.
+1. Download `sonar-coldfusion-plugin-3.0.0.jar` from the [releases section](https://github.com/mwinfie/sonar-coldfusion/releases) or build it yourself by cloning the code and running `mvn clean package`.
 1. Copy `sonar-coldfusion-plugin-3.0.0.jar` to `<sonarqube dir>/extensions/plugins`.
 1. Restart SonarQube.
+
+### Using Docker
+For Docker-based SonarQube installations:
+```bash
+# Copy plugin to container
+docker cp sonar-coldfusion-plugin-3.0.0.jar sonarqube:/opt/sonarqube/extensions/plugins/
+
+# Restart container
+docker restart sonarqube
+```
 
 ### Legacy Versions
 For older SonarQube installations, use the appropriate legacy plugin version (see Compatibility section below).
@@ -28,7 +42,26 @@ SonarQube Version | Plugin Version | Status
 ### Requirements for v3.0.0
 - **SonarQube**: 2025.4 Community/Developer/Enterprise editions
 - **Java**: 17+ (minimum 11 for runtime)
-- **CFLint**: 1.5.0 (bundled)
+- **CFLint**: 1.5.9 (cfmleditor fork - bundled)
+- **Maven**: 3.6+ (for building from source)
+
+## Quick Start
+
+1. **Install the plugin** in your SonarQube 2025.4+ instance
+2. **Create a `sonar-project.properties`** file in your ColdFusion project:
+   ```properties
+   sonar.projectKey=my-coldfusion-project
+   sonar.projectName=My ColdFusion Project
+   sonar.projectVersion=1.0
+   sonar.sources=.
+   sonar.sourceEncoding=UTF-8
+   # Optional: specify file extensions (defaults to .cfc,.cfm)
+   sonar.cf.file.suffixes=.cfc,.cfm,.cfml
+   ```
+3. **Run the SonarQube Scanner**:
+   ```bash
+   sonar-scanner
+   ```
 
 ## What's New in v3.0.0
 
@@ -41,6 +74,7 @@ SonarQube Version | Plugin Version | Status
 - **Plugin API 12.0**: Updated to latest SonarQube plugin architecture
 - **Java 17 Support**: Built with modern Java for better performance
 - **Programmatic Configuration**: Enhanced property definition system
+- **CFLint Integration**: Uses cfmleditor/CFLint 1.5.9 fork with enhanced features
 
 ### 🛡️ **Improved Reliability**
 - Comprehensive unit test coverage with Plugin API 12.0 compatibility
@@ -48,7 +82,7 @@ SonarQube Version | Plugin Version | Status
 - Better integration with SonarQube 2025.4 security features
 
 ### 📊 **Maintained Compatibility**
-- **Same CFLint Rules**: All existing rule definitions preserved
+- **Same CFLint Rules**: All existing rule definitions preserved (cfmleditor/CFLint 1.5.9)
 - **Quality Profiles**: Existing configurations remain compatible
 - **Analysis Results**: Consistent issue detection and metrics
 
@@ -75,51 +109,94 @@ sonar.ce.javaOpts=-Xmx2g -Xms128m -XX:+HeapDumpOnOutOfMemoryError
 
 2GB might be enough, or perhaps your code base warrants more.
 
-## Building
+## Building from Source
 
 ### Prerequisites
-- **Java**: 17+ (OpenJDK or Oracle JDK)
+- **Java**: 17+ (OpenJDK or Oracle JDK recommended)
 - **Maven**: 3.6+ (3.9+ recommended)
+- **Git**: For cloning the repository
 - **SonarQube Plugin API**: 12.0.0.2960 (managed by Maven)
 
-### Build Commands
+### Development Setup
 ```bash
-# Clean build with tests
+# Clone the repository
+git clone https://github.com/mwinfie/sonar-coldfusion.git
+cd sonar-coldfusion
+
+# Build and test
 mvn clean package
 
-# Build without tests (faster)
+# Quick build without tests
 mvn clean package -DskipTests
 
 # Development build with verbose output
 mvn clean compile -X
 ```
 
+### CI/CD Information
+This project uses GitHub Actions for continuous integration:
+
+- **Main CI Pipeline**: Runs on every push and pull request
+- **Nightly Builds**: Extended compatibility testing across OS/Java versions
+- **Dependency Updates**: Automated weekly dependency scanning
+- **Security Scanning**: Automated vulnerability detection
+- **Pull Request Validation**: Comprehensive PR checks and validation
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development guidelines.
+
 ### Build Artifacts
-- **Main**: `target/sonar-coldfusion-plugin-3.0.0.jar`
-- **Tests**: Unit tests validate Plugin API 12.0 compatibility
-- **Dependencies**: All CFLint and plugin dependencies are bundled
+- **Main Plugin**: `target/sonar-coldfusion-plugin-3.0.0.jar`
+- **Test Reports**: `target/surefire-reports/`
+- **Coverage Reports**: `target/site/jacoco/`
+
+## Contributing
+
+We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) for details on:
+
+- Development setup and workflow
+- Code style and standards  
+- Testing requirements
+- Pull request process
+- Issue reporting guidelines
+
+### Quick Contributing Steps
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Make your changes and add tests
+4. Run the test suite: `mvn clean verify`
+5. Submit a pull request
+
+See [CHANGELOG.md](CHANGELOG.md) for recent changes and version history.
+
+## Support and Documentation
+
+- **Issues**: [GitHub Issues](https://github.com/mwinfie/sonar-coldfusion/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/mwinfie/sonar-coldfusion/discussions)
+- **Documentation**: [Wiki](https://github.com/mwinfie/sonar-coldfusion/wiki)
+- **SonarQube Docs**: [Plugin Development](https://docs.sonarqube.org/latest/extend/developing-plugin/)
 
 ## Releasing
 
-Setup Maven settings.xml with
+### Automated Releases
+Releases are automated through GitHub Actions:
 
-```xml
-  <servers>
-    <server>
-        <id>github</id>
-        <privateKey>yourprivatekey</privateKey>
-    </server>
-  </servers>
-```
+1. **Create a release** on GitHub with a version tag (e.g., `v3.0.1`)
+2. **CI/CD pipeline** automatically builds and attaches artifacts
+3. **Release notes** are generated from changelog and commits
 
-Run Maven goal
+### Manual Release Process
+For maintainers with appropriate permissions:
 
 ```bash
-mvn clean package de.jutzig:github-release-plugin:1.3.0:release 
-```
+# Update version in pom.xml
+mvn versions:set -DnewVersion=3.0.1
 
-This will build the plugin jar file, create a release and a tag on github and upload the artifact to
-the [repo](https://github.com/stepstone-tech/sonar-coldfusion).
+# Build and test
+mvn clean verify
+
+# Create GitHub release
+# Artifacts will be automatically built and attached by CI
+```
 
 ## Contributors
 

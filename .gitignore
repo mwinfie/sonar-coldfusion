@@ -1,6 +1,32 @@
 # Maven
 target/
-*.versionsBackup
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Compiled class files
+*.class
+
+# Log files
+*.log
+
+# Package Files
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Virtual machine crash logs
+hs_err_pid*
 
 # Backup files and temporary artifacts
 *-backup.*
@@ -8,24 +34,92 @@ target/
 *.disabled
 *.tmp
 *~
+*.backup
+*.bak
 
-# IntelliJ IDEA
+# IDE - IntelliJ IDEA
+.idea/
 *.iws
 *.iml
 *.ipr
-.idea/
+out/
+*.idea_modules/
 
-# Eclipse
-.classpath
+# IDE - Eclipse
 .project
-.settings
+.classpath
+.c9/
+*.launch
+.settings/
+.metadata
+bin/
+tmp/
+local.properties
+.loadpath
+.recommenders
 
-# ---- Windows
-# Windows image file caches
+# IDE - NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# IDE - Visual Studio Code
+.vscode/
+*.code-workspace
+
+# OS - macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# OS - Windows
 Thumbs.db
-# Folder config file
+ehthumbs.db
 Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk
+
+# OS - Linux
+*~
 
 # SonarQube
 .sonar/
-.vscode/settings.json
+.sonarqube/
+
+# Testing and CI/CD
+coverage/
+test-output/
+*.tlog
+test-projects/
+perf-test-project/
+deployment/
+
+# Security and dependency scanning
+dependency-check-report.html
+dependency-check-report.xml
+trivy-results.sarif
+
+# Node.js (if using Node-based tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Cache directories
+.cache/
+.gradle/
+
+# Plugin development
+plugin-sandbox/
+sonarqube-test/

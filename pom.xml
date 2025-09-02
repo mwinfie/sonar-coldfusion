@@ -9,8 +9,8 @@
     <version>3.0.0</version>
 
     <name>SonarQube ColdFusion Plugin</name>
-    <description>CFLint 1.5.9 Plugin for SonarQube 2025.4+ - Enhanced performance and modern Plugin API 12.0 support with cfmleditor improvements</description>
-    <url>https://github.com/cfmleditor/sonar-coldfusion</url>
+    <description>Enables scanning of ColdFusion source files</description>
+    <url>https://github.com/mwinfie/sonar-coldfusion</url>
 
     <organization>
         <name>StepStone GmbH</name>
@@ -25,14 +25,14 @@
     </licenses>
 
     <scm>
-        <connection>git@github.com:cfmleditor/sonar-coldfusion.git</connection>
-        <developerConnection>git@github.com:cfmleditor/sonar-coldfusion.git</developerConnection>
-        <url>https://github.com/cfmleditor/sonar-coldfusion</url>
+        <connection>git@github.com:mwinfie/sonar-coldfusion.git</connection>
+        <developerConnection>git@github.com:mwinfie/sonar-coldfusion.git</developerConnection>
+        <url>https://github.com/mwinfie/sonar-coldfusion</url>
     </scm>
     
     <issueManagement>
         <system>GitHub</system>
-        <url>https://github.com/cfmleditor/sonar-coldfusion/issues</url>
+        <url>https://github.com/mwinfie/sonar-coldfusion/issues</url>
     </issueManagement>
 
     <properties>
@@ -128,8 +128,8 @@
                 <configuration>
                     <pluginClass>com.stepstone.sonar.plugin.coldfusion.ColdFusionPlugin</pluginClass>
                     <pluginName>ColdFusion</pluginName>
-                    <pluginDescription>CFLint ${cflint.version} Plugin for SonarQube 2025.4+ with Enhanced Include Processing</pluginDescription>
-                    <pluginSourcesUrl>https://github.com/cfmleditor/sonar-coldfusion</pluginSourcesUrl>
+                    <pluginDescription>CFLint ${cflint.version} Plugin for SonarQube 2025.4+ with Enhanced Include Processing (cfmleditor/CFLint)</pluginDescription>
+                    <pluginSourcesUrl>https://github.com/mwinfie/sonar-coldfusion</pluginSourcesUrl>
                     <requiredForLanguages>cf</requiredForLanguages>
                     <pluginApiMinVersion>12.0</pluginApiMinVersion>
                 </configuration>
