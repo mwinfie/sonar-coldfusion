@@ -36,6 +36,10 @@ jobs:
         distribution: 'temurin'
         java-version: ${{ matrix.java }}
 
+    - name: Authenticate to GitHub Packages
+      run: |
+        echo "<settings><servers><server><id>github</id><username>${{ github.actor }}</username><password>${{ secrets.GITHUB_TOKEN }}</password></server></servers></settings>" > ~/.m2/settings.xml
+
     - name: Cache Maven packages
       uses: actions/cache@v4
       with:
@@ -52,17 +56,13 @@ jobs:
     - name: Run unit tests
       run: mvn test -B
 
-    - name: Generate test reports
-      run: mvn surefire-report:report-only
-
     - name: Upload test results
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results-java-${{ matrix.java }}
-        path: |
-          target/surefire-reports/
-          target/site/
+        path: target/surefire-reports/
+        if-no-files-found: warn
 
     - name: Build plugin JAR
       run: mvn package -DskipTests -B
@@ -90,6 +90,10 @@ jobs:
       with:
         distribution: 'temurin'
         java-version: 17
+
+    - name: Authenticate to GitHub Packages
+      run: |
+        echo "<settings><servers><server><id>github</id><username>${{ github.actor }}</username><password>${{ secrets.GITHUB_TOKEN }}</password></server></servers></settings>" > ~/.m2/settings.xml
 
     - name: Cache Maven packages
       uses: actions/cache@v4
@@ -148,6 +152,10 @@ jobs:
       with:
         distribution: 'temurin'
         java-version: 17
+
+    - name: Authenticate to GitHub Packages
+      run: |
+        echo "<settings><servers><server><id>github</id><username>${{ github.actor }}</username><password>${{ secrets.GITHUB_TOKEN }}</password></server></servers></settings>" > ~/.m2/settings.xml
 
     - name: Download plugin artifact
       uses: actions/download-artifact@v4
@@ -314,6 +322,10 @@ jobs:
         distribution: 'temurin'
         java-version: 17
 
+    - name: Authenticate to GitHub Packages
+      run: |
+        echo "<settings><servers><server><id>github</id><username>${{ github.actor }}</username><password>${{ secrets.GITHUB_TOKEN }}</password></server></servers></settings>" > ~/.m2/settings.xml
+
     - name: Cache Maven packages
       uses: actions/cache@v4
       with:
@@ -324,13 +336,17 @@ jobs:
     - name: Build release artifact
       run: mvn clean package -B
 
+    - name: Find JAR file
+      id: jar
+      run: echo "jar_file=$(find target -name '*.jar' -type f | head -1)" >> $GITHUB_OUTPUT
+
     - name: Upload release artifact
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ github.event.release.upload_url }}
-        asset_path: target/sonar-coldfusion-plugin-*.jar
+        asset_path: ${{ steps.jar.outputs.jar_file }}
         asset_name: sonar-coldfusion-plugin-${{ github.event.release.tag_name }}.jar
         asset_content_type: application/java-archive
 
