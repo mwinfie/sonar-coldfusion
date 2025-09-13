@@ -133,16 +133,20 @@ public class CFLintAnalyzer {
         try {
             final Writer xmlwriter = createXMLWriter(fs.workDir() + File.separator + "cflint-result.xml", StandardCharsets.UTF_8);
 
-            CFLintPluginInfo cflintPluginInfo = ConfigUtils.loadDefaultPluginInfo();
-            ConfigBuilder cflintConfigBuilder = new ConfigBuilder(cflintPluginInfo);
+            CFLintPluginInfo cflintPluginInfo;
+            ConfigBuilder cflintConfigBuilder;
+            CFLintAPI linter;
             
-            cflintConfigBuilder.addCustomConfig(configFile.getPath());
-
-            CFLintAPI linter = new CFLintAPI(
-                cflintConfigBuilder.build()
-            );
-
-            linter.setVerbose(true);
+            try {
+                cflintPluginInfo = ConfigUtils.loadDefaultPluginInfo();
+                cflintConfigBuilder = new ConfigBuilder(cflintPluginInfo);
+                cflintConfigBuilder.addCustomConfig(configFile.getPath());
+                linter = new CFLintAPI(cflintConfigBuilder.build());
+                linter.setVerbose(true);
+            } catch (Exception configException) {
+                logger.error("Failed to initialize CFLint configuration for batch analysis: {}", configException.getMessage());
+                throw new Exception("CFLint configuration failed", configException);
+            }
             
             // linter.setThreaded(true);
 
@@ -186,12 +190,20 @@ public class CFLintAnalyzer {
             // Write XML header for combined results
             xmlwriter.write("<issues version=\"1.0\">\n");
             
-            CFLintPluginInfo cflintPluginInfo = ConfigUtils.loadDefaultPluginInfo();
-            ConfigBuilder cflintConfigBuilder = new ConfigBuilder(cflintPluginInfo);
-            cflintConfigBuilder.addCustomConfig(configFile.getPath());
-
-            CFLintAPI linter = new CFLintAPI(cflintConfigBuilder.build());
-            linter.setVerbose(true);
+            CFLintPluginInfo cflintPluginInfo;
+            ConfigBuilder cflintConfigBuilder;
+            CFLintAPI linter;
+            
+            try {
+                cflintPluginInfo = ConfigUtils.loadDefaultPluginInfo();
+                cflintConfigBuilder = new ConfigBuilder(cflintPluginInfo);
+                cflintConfigBuilder.addCustomConfig(configFile.getPath());
+                linter = new CFLintAPI(cflintConfigBuilder.build());
+                linter.setVerbose(true);
+            } catch (Exception e) {
+                logger.error("Failed to initialize CFLint API for individual file analysis: {}", e.getMessage());
+                throw new IOException("CFLint initialization failed", e);
+            }
             
             for (String filePath : filesToScan) {
                 analyzeIndividualFile(linter, filePath, xmlwriter);
