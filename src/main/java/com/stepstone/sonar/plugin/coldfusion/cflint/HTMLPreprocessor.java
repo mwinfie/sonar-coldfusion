@@ -122,7 +122,8 @@ public class HTMLPreprocessor {
             }
             
             if (!processedContent.equals(originalContent)) {
-                logger.debug("File {} was preprocessed - {} chars -> {} chars", filePath, originalContent.length(), processedContent.length());
+                logger.debug("File {} was preprocessed - {} chars -> {} chars", 
+                    new Object[]{filePath, originalContent.length(), processedContent.length()});
             }
             
             return processedContent;
