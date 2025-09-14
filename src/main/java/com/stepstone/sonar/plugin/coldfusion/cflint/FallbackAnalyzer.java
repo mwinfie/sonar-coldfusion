@@ -305,12 +305,12 @@ public class FallbackAnalyzer {
                 
                 issues.add(issue);
                 logger.debug("Fallback rule {} matched in {} at line {}: {}", 
-                           rule.id, filePath, lineNumber, evidence);
+                           new Object[]{rule.id, filePath, lineNumber, evidence});
             }
             
         } catch (Exception e) {
             logger.debug("Failed to apply fallback rule {} to file {}: {}", 
-                        rule.id, filePath, e.getMessage());
+                        new Object[]{rule.id, filePath, e.getMessage()});
         }
         
         return issues;

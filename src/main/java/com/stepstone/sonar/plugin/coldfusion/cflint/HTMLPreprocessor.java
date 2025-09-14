@@ -82,7 +82,7 @@ public class HTMLPreprocessor {
         this.fixMalformedAttributes = fixMalformedAttributes;
         
         logger.debug("HTMLPreprocessor initialized - enabled: {}, htmlWrapper: {}, unclosedTags: {}, attributes: {}", 
-                    enabled, addHtmlWrapper, fixUnclosedTags, fixMalformedAttributes);
+                    new Object[]{enabled, addHtmlWrapper, fixUnclosedTags, fixMalformedAttributes});
     }
     
     /**
