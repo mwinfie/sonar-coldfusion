@@ -391,13 +391,13 @@ public class CFLintAnalyzer {
      */
     private void categorizeAndRecordError(String filePath, Exception exception) {
         if (isJerichoParsingError(exception)) {
-            errorCollector.addError(ParsingErrorType.JERICHO_PARSER_FAILURE, filePath, exception);
+            errorCollector.addError(filePath, exception);
         } else if (isCFMLSyntaxError(exception)) {
-            errorCollector.addError(ParsingErrorType.CFML_SYNTAX_ERROR, filePath, exception);
+            errorCollector.addError(filePath, exception);
         } else if (isHTMLStructureError(exception)) {
-            errorCollector.addError(ParsingErrorType.HTML_STRUCTURE_MISSING, filePath, exception);
+            errorCollector.addError(filePath, exception);
         } else {
-            errorCollector.addError(ParsingErrorType.GENERAL_PARSING_ERROR, filePath, exception);
+            errorCollector.addError(filePath, exception);
         }
     }
     

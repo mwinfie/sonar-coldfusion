@@ -131,7 +131,7 @@ public class HTMLPreprocessor {
         } catch (Exception e) {
             logger.warn("Failed to preprocess file {}: {} - Using original content", 
                        filePath, e.getMessage());
-            logger.debug("Preprocessing error details for {}: ", filePath, e);
+            logger.debug("Preprocessing error details for {}", filePath, e);
             return originalContent; // Fallback to original on any error
         }
     }
