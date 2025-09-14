@@ -23,6 +23,9 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import javax.xml.stream.XMLStreamException;
@@ -60,6 +63,8 @@ public class CFLintAnalyzer {
     private final FileSystem fs;
     private final Logger logger = Loggers.get(CFLintAnalyzer.class);
     private final ParsingErrorCollector errorCollector = new ParsingErrorCollector();
+    private final HTMLPreprocessor htmlPreprocessor;
+    private final FallbackAnalyzer fallbackAnalyzer;
     
     // Configuration-driven parsing behavior (RIR-005)
     private final ParsingMode parsingMode;
@@ -88,8 +93,22 @@ public class CFLintAnalyzer {
         this.errorThreshold = settings.getInt(ColdFusionPlugin.ERROR_THRESHOLD).orElse(50);
         this.legacySupport = settings.getBoolean(ColdFusionPlugin.LEGACY_SUPPORT).orElse(true);
         
-        logger.info("CFLint Analyzer initialized with: mode={}, skipMalformed={}, legacySupport={}, errorThreshold={}%", 
-                   parsingMode, skipMalformedFiles, legacySupport, errorThreshold);
+        // Initialize HTML preprocessor with configuration
+        boolean preprocessingEnabled = settings.getBoolean(ColdFusionPlugin.HTML_PREPROCESSING).orElse(true);
+        this.htmlPreprocessor = new HTMLPreprocessor(
+            preprocessingEnabled,
+            true, // addHtmlWrapper
+            true, // fixUnclosedTags  
+            true  // fixMalformedAttributes
+        );
+        
+        // Initialize fallback analyzer
+        boolean fallbackEnabled = settings.getBoolean(ColdFusionPlugin.FALLBACK_ANALYSIS).orElse(true);
+        int maxFallbackIssues = settings.getInt(ColdFusionPlugin.FALLBACK_MAX_ISSUES).orElse(50);
+        this.fallbackAnalyzer = new FallbackAnalyzer(fallbackEnabled, maxFallbackIssues);
+        
+        logger.info("CFLint Analyzer initialized with: mode={}, skipMalformed={}, legacySupport={}, errorThreshold={}%, preprocessing={}, fallback={}", 
+                   parsingMode, skipMalformedFiles, legacySupport, errorThreshold, preprocessingEnabled, fallbackEnabled);
     }
 
     public void analyze(File configFile) throws IOException, XMLStreamException {
@@ -130,8 +149,9 @@ public class CFLintAnalyzer {
      * @return true if batch analysis succeeded, false otherwise
      */
     private boolean attemptBatchAnalysis(File configFile, List<String> filesToScan) {
+        Writer xmlwriter = null;
         try {
-            final Writer xmlwriter = createXMLWriter(fs.workDir() + File.separator + "cflint-result.xml", StandardCharsets.UTF_8);
+            xmlwriter = createXMLWriter(fs.workDir() + File.separator + "cflint-result.xml", StandardCharsets.UTF_8);
 
             CFLintPluginInfo cflintPluginInfo;
             ConfigBuilder cflintConfigBuilder;
@@ -142,13 +162,13 @@ public class CFLintAnalyzer {
                 cflintConfigBuilder = new ConfigBuilder(cflintPluginInfo);
                 cflintConfigBuilder.addCustomConfig(configFile.getPath());
                 linter = new CFLintAPI(cflintConfigBuilder.build());
-                linter.setVerbose(true);
+                linter.setVerbose(false); // Reduce verbosity to minimize log noise
             } catch (Exception configException) {
                 logger.error("Failed to initialize CFLint configuration for batch analysis: {}", configException.getMessage());
                 throw new Exception("CFLint configuration failed", configException);
             }
             
-            // linter.setThreaded(true);
+            logger.info("Attempting batch analysis of {} files", filesToScan.size());
 
             CFLintResult lintResult = linter.scan(filesToScan);
 
@@ -165,11 +185,50 @@ public class CFLintAnalyzer {
             logger.warn("Batch CFLint analysis failed with error: {} - Will attempt individual file analysis", ce.getMessage());
             logger.debug("Full batch analysis error details:", ce);
             
-            // Record the batch failure for error reporting
-            errorCollector.addError("BATCH_ANALYSIS", ce);
+            // Record the batch failure for error reporting - check for specific error types
+            if (isJerichoParsingError(ce)) {
+                errorCollector.addError("BATCH_ANALYSIS_JERICHO", ce);
+            } else {
+                errorCollector.addError("BATCH_ANALYSIS", ce);
+            }
             
             return false;
+        } finally {
+            if (xmlwriter != null) {
+                try {
+                    xmlwriter.close();
+                } catch (IOException e) {
+                    logger.debug("Failed to close XML writer in batch analysis: {}", e.getMessage());
+                }
+            }
         }
+    }
+    
+    /**
+     * Determines if an exception is related to Jericho HTML parser failures.
+     * This helps categorize parsing errors for better reporting.
+     * 
+     * @param exception Exception to analyze
+     * @return true if this appears to be a Jericho parsing error
+     */
+    private boolean isJerichoParsingError(Exception exception) {
+        if (exception == null) return false;
+        
+        String message = exception.getMessage();
+        if (message == null) message = "";
+        
+        // Check for NullPointerException patterns common in Jericho parser
+        if (exception instanceof NullPointerException) {
+            return true;
+        }
+        
+        // Check for Jericho-specific error patterns
+        String lowerMessage = message.toLowerCase();
+        return lowerMessage.contains("jericho") ||
+               lowerMessage.contains("htmlparser") ||
+               lowerMessage.contains("tag.getelement") ||
+               lowerMessage.contains("parsertag") ||
+               lowerMessage.contains("net.htmlparser");
     }
     
     /**
@@ -226,17 +285,40 @@ public class CFLintAnalyzer {
     /**
      * Analyzes a single file with comprehensive error handling.
      * Implements RIR-001: Null Safety Implementation at the plugin level.
+     * Now includes HTML preprocessing to fix common parsing issues.
      * 
      * @param linter CFLint API instance
      * @param filePath Path to the file to analyze
      * @param xmlwriter XML writer for results
      */
     private void analyzeIndividualFile(CFLintAPI linter, String filePath, Writer xmlwriter) {
+        String actualFilePath = filePath;
+        Path temporaryFile = null;
+        
         try {
             logger.debug("Analyzing file: {}", filePath);
             
+            // Apply HTML preprocessing if enabled
+            if (htmlPreprocessor.isEnabled()) {
+                try {
+                    String preprocessedContent = htmlPreprocessor.preprocessFile(filePath);
+                    
+                    // Only create temporary file if content was actually changed
+                    String originalContent = Files.readString(Paths.get(filePath), StandardCharsets.UTF_8);
+                    if (!preprocessedContent.equals(originalContent)) {
+                        temporaryFile = htmlPreprocessor.createTemporaryPreprocessedFile(filePath, preprocessedContent);
+                        actualFilePath = temporaryFile.toString();
+                        logger.debug("Using preprocessed file for analysis: {} -> {}", filePath, actualFilePath);
+                    }
+                } catch (Exception preprocessException) {
+                    logger.warn("Preprocessing failed for file {}: {} - Using original file", 
+                               filePath, preprocessException.getMessage());
+                    // Continue with original file if preprocessing fails
+                }
+            }
+            
             List<String> singleFile = new ArrayList<>();
-            singleFile.add(filePath);
+            singleFile.add(actualFilePath);
             
             CFLintResult result = linter.scan(singleFile);
             
@@ -244,6 +326,10 @@ public class CFLintAnalyzer {
             // This is a basic implementation - in production, we'd need proper XML parsing
             String resultXml = getResultXmlContent(result);
             if (resultXml != null && !resultXml.trim().isEmpty()) {
+                // If we used a temporary file, we need to replace its path with the original in results
+                if (temporaryFile != null) {
+                    resultXml = resultXml.replace(temporaryFile.toString(), filePath);
+                }
                 xmlwriter.write(resultXml);
                 xmlwriter.write("\n");
             }
@@ -253,18 +339,153 @@ public class CFLintAnalyzer {
             
         } catch (Exception e) {
             failedFiles++;
-            errorCollector.addError(filePath, e);
+            
+            // Enhanced error categorization and recording
+            categorizeAndRecordError(filePath, e);
             
             logger.warn("Failed to analyze file: {} - Error: {}", filePath, e.getMessage());
             logger.debug("Detailed error for file {}: ", filePath, e);
             
+            // Attempt fallback analysis if enabled
+            String fallbackResults = attemptFallbackAnalysis(filePath);
+            if (fallbackResults != null && !fallbackResults.trim().isEmpty()) {
+                try {
+                    xmlwriter.write(fallbackResults);
+                    xmlwriter.write("\n");
+                    logger.debug("Fallback analysis provided results for file: {}", filePath);
+                } catch (IOException fallbackWriteException) {
+                    logger.warn("Failed to write fallback analysis results for file {}: {}", 
+                               filePath, fallbackWriteException.getMessage());
+                }
+            }
+            
             // Write error information as comment in XML for debugging
             try {
-                xmlwriter.write(String.format("<!-- PARSING_ERROR: File=%s, Error=%s -->\n", 
-                                            filePath, e.getMessage().replaceAll("--", "- -")));
+                xmlwriter.write(String.format("<!-- PARSING_ERROR: File=%s, Error=%s, Type=%s -->\n", 
+                                            filePath, 
+                                            e.getMessage().replaceAll("--", "- -"),
+                                            categorizeErrorType(e)));
             } catch (IOException ioException) {
                 logger.error("Failed to write error comment for file {}: {}", filePath, ioException.getMessage());
             }
+        } finally {
+            // Clean up temporary file if created
+            if (temporaryFile != null) {
+                try {
+                    Files.deleteIfExists(temporaryFile);
+                    logger.debug("Cleaned up temporary file: {}", temporaryFile);
+                } catch (Exception cleanupException) {
+                    logger.debug("Failed to clean up temporary file {}: {}", 
+                                temporaryFile, cleanupException.getMessage());
+                    // Not critical - file will be cleaned on JVM exit
+                }
+            }
+        }
+    }
+    
+    /**
+     * Categorizes parsing errors and records them appropriately.
+     * 
+     * @param filePath File that failed to parse
+     * @param exception Exception that occurred
+     */
+    private void categorizeAndRecordError(String filePath, Exception exception) {
+        if (isJerichoParsingError(exception)) {
+            errorCollector.addError(ParsingErrorType.JERICHO_PARSER_FAILURE, filePath, exception);
+        } else if (isCFMLSyntaxError(exception)) {
+            errorCollector.addError(ParsingErrorType.CFML_SYNTAX_ERROR, filePath, exception);
+        } else if (isHTMLStructureError(exception)) {
+            errorCollector.addError(ParsingErrorType.HTML_STRUCTURE_MISSING, filePath, exception);
+        } else {
+            errorCollector.addError(ParsingErrorType.GENERAL_PARSING_ERROR, filePath, exception);
+        }
+    }
+    
+    /**
+     * Returns a simple string categorization of error type for logging.
+     * 
+     * @param exception Exception to categorize
+     * @return Error type description
+     */
+    private String categorizeErrorType(Exception exception) {
+        if (isJerichoParsingError(exception)) {
+            return "JERICHO_PARSER";
+        } else if (isCFMLSyntaxError(exception)) {
+            return "CFML_SYNTAX";
+        } else if (isHTMLStructureError(exception)) {
+            return "HTML_STRUCTURE";
+        } else {
+            return "GENERAL_PARSING";
+        }
+    }
+    
+    /**
+     * Checks if an exception indicates a CFML syntax error.
+     * 
+     * @param exception Exception to check
+     * @return true if this appears to be a CFML syntax error
+     */
+    private boolean isCFMLSyntaxError(Exception exception) {
+        if (exception == null) return false;
+        
+        String message = exception.getMessage();
+        if (message == null) return false;
+        
+        String lowerMessage = message.toLowerCase();
+        return lowerMessage.contains("cfml") ||
+               lowerMessage.contains("coldfusion") ||
+               lowerMessage.contains("syntax error") ||
+               lowerMessage.contains("parse error");
+    }
+    
+    /**
+     * Checks if an exception indicates HTML structure problems.
+     * 
+     * @param exception Exception to check
+     * @return true if this appears to be an HTML structure error
+     */
+    private boolean isHTMLStructureError(Exception exception) {
+        if (exception == null) return false;
+        
+        String message = exception.getMessage();
+        if (message == null) return false;
+        
+        String lowerMessage = message.toLowerCase();
+        return lowerMessage.contains("html") ||
+               lowerMessage.contains("malformed") ||
+               lowerMessage.contains("tag") ||
+               lowerMessage.contains("element");
+    }
+    
+    /**
+     * Attempts fallback analysis when primary CFLint parsing fails.
+     * 
+     * @param filePath Path to file that failed primary analysis
+     * @return XML results from fallback analysis, or null if not available
+     */
+    private String attemptFallbackAnalysis(String filePath) {
+        if (!fallbackAnalyzer.isEnabled()) {
+            return null;
+        }
+        
+        try {
+            logger.debug("Attempting fallback analysis for file: {}", filePath);
+            
+            List<FallbackAnalyzer.FallbackIssue> issues = fallbackAnalyzer.analyzeFile(filePath);
+            if (issues.isEmpty()) {
+                logger.debug("Fallback analysis found no issues in file: {}", filePath);
+                return null;
+            }
+            
+            String xmlOutput = fallbackAnalyzer.generateXmlOutput(issues);
+            logger.info("Fallback analysis found {} issues in file: {}", issues.size(), filePath);
+            
+            return xmlOutput;
+            
+        } catch (Exception fallbackException) {
+            logger.warn("Fallback analysis failed for file {}: {}", filePath, fallbackException.getMessage());
+            logger.debug("Fallback analysis error details for {}: ", filePath, fallbackException);
+            return null;
         }
     }
     

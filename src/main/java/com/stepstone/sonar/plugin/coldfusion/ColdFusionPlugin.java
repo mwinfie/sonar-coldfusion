@@ -42,6 +42,9 @@ public class ColdFusionPlugin implements Plugin {
     public static final String ERROR_REPORTING_LEVEL = "sonar.cf.parsing.errorReporting";
     public static final String ERROR_THRESHOLD = "sonar.cf.parsing.errorThreshold";
     public static final String LEGACY_SUPPORT = "sonar.cf.parsing.legacySupport";
+    public static final String HTML_PREPROCESSING = "sonar.cf.parsing.htmlPreprocessing";
+    public static final String FALLBACK_ANALYSIS = "sonar.cf.parsing.fallbackAnalysis";
+    public static final String FALLBACK_MAX_ISSUES = "sonar.cf.parsing.fallbackMaxIssues";
 
     @Override
     public void define(Context context) {
@@ -102,6 +105,24 @@ public class ColdFusionPlugin implements Plugin {
                         .defaultValue("true")
                         .name("Legacy ColdFusion Support")
                         .description("Enables enhanced support for legacy ColdFusion templates with non-standard HTML structure")
+                        .build(),
+                
+                PropertyDefinition.builder(HTML_PREPROCESSING)
+                        .defaultValue("true")
+                        .name("HTML/CFML Preprocessing")
+                        .description("Enables preprocessing of CFML files to fix common HTML structure issues before analysis")
+                        .build(),
+                
+                PropertyDefinition.builder(FALLBACK_ANALYSIS)
+                        .defaultValue("true")
+                        .name("Fallback Analysis")
+                        .description("Enables regex-based analysis for files that fail primary CFLint parsing")
+                        .build(),
+                
+                PropertyDefinition.builder(FALLBACK_MAX_ISSUES)
+                        .defaultValue("50")
+                        .name("Fallback Analysis Max Issues Per File")
+                        .description("Maximum number of issues to report per file during fallback analysis")
                         .build()
         );
     }
