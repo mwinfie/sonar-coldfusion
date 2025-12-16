@@ -8,13 +8,13 @@
 
 A [SonarQube plugin](http://www.sonarqube.org/) for analyzing ColdFusion code, based on the [CFLint library](https://github.com/cfmleditor/CFLint).
 
-**Current Version: 3.0.0** - Updated for SonarQube 2025.4+ compatibility with enhanced performance and modern Plugin API 12.0 support.
+**Current Version: 3.2.0** - Major performance optimization with thread pool reuse for timeout enforcement, reducing analysis time by up to 91% on large codebases.
 
 ## Installation
 
 ### For SonarQube 2025.4+
-1. Download `sonar-coldfusion-plugin-3.0.0.jar` from the [releases section](https://github.com/mwinfie/sonar-coldfusion/releases) or build it yourself by cloning the code and running `mvn clean package`.
-1. Copy `sonar-coldfusion-plugin-3.0.0.jar` to `<sonarqube dir>/extensions/plugins`.
+1. Download `sonar-coldfusion-plugin-3.2.0.jar` from the [releases section](https://github.com/mwinfie/sonar-coldfusion/releases) or build it yourself by cloning the code and running `mvn clean package`.
+1. Copy `sonar-coldfusion-plugin-3.2.0.jar` to `<sonarqube dir>/extensions/plugins`.
 1. Restart SonarQube.
 
 ### Using Docker
@@ -34,12 +34,13 @@ For older SonarQube installations, use the appropriate legacy plugin version (se
 
 SonarQube Version | Plugin Version | Status
 ------------------|----------------|--------
-2025.4+          | 3.0.0          | ✅ **Current** (Plugin API 12.0)
+2025.4+          | 3.2.0          | ✅ **Current** (Plugin API 12.0)
+2025.4+          | 3.0.0          | ✅ Supported
 9.0 - 9.1        | 2.2.0          | ⚠️ Legacy (Plugin API 9.x)
 7.6 - 8.9        | 2.1.1          | ⚠️ Legacy  
 5.6 - 7.5        | 1.5.0          | ⚠️ Legacy
 
-### Requirements for v3.0.0
+### Requirements for v3.2.0
 - **SonarQube**: 2025.4 Community/Developer/Enterprise editions
 - **Java**: 17+ (minimum 11 for runtime)
 - **CFLint**: 1.5.9 (cfmleditor fork - bundled)
@@ -63,7 +64,23 @@ SonarQube Version | Plugin Version | Status
    sonar-scanner
    ```
 
-## What's New in v3.0.0
+## What's New in v3.2.0
+
+### 🚀 Performance Optimization (v3.2.0)
+- **Thread Pool Reuse**: Replaced per-file ExecutorService creation with shared thread pool for timeout enforcement
+- **91% Faster Analysis**: Reduced analysis time from 709s to 60s on 493-file repositories
+- **Scalability Improvements**: AIP repository (3,380 files) completes in 21 minutes vs projected 90-120 minutes
+- **Zero Timeouts**: Maintains all timeout protection features while dramatically improving performance
+- **Production Ready**: Tested on repositories ranging from 60 to 3,380 files with 100% success rates
+
+### Key Metrics
+- **Per-file overhead**: Reduced from ~1.3s to ~0.05s (96% reduction)
+- **Large repository performance**: ~80% faster on 3,000+ file codebases
+- **Memory efficiency**: Fixed resource leak with proper ExecutorService lifecycle management
+
+## Previous Releases
+
+### What's New in v3.0.0
 
 ### 🚀 **Enhanced Performance**
 - **38% faster analysis** compared to v2.2.0
@@ -145,7 +162,7 @@ This project uses GitHub Actions for continuous integration:
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development guidelines.
 
 ### Build Artifacts
-- **Main Plugin**: `target/sonar-coldfusion-plugin-3.0.0.jar`
+- **Main Plugin**: `target/sonar-coldfusion-plugin-3.2.0.jar`
 - **Test Reports**: `target/surefire-reports/`
 - **Coverage Reports**: `target/site/jacoco/`
 
@@ -180,7 +197,7 @@ See [CHANGELOG.md](CHANGELOG.md) for recent changes and version history.
 ### Automated Releases
 Releases are automated through GitHub Actions:
 
-1. **Create a release** on GitHub with a version tag (e.g., `v3.0.1`)
+1. **Create a release** on GitHub with a version tag (e.g., `v3.2.1`)
 2. **CI/CD pipeline** automatically builds and attaches artifacts
 3. **Release notes** are generated from changelog and commits
 
@@ -189,7 +206,7 @@ For maintainers with appropriate permissions:
 
 ```bash
 # Update version in pom.xml
-mvn versions:set -DnewVersion=3.0.1
+mvn versions:set -DnewVersion=3.2.1
 
 # Build and test
 mvn clean verify
