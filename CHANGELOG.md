@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Per-File Overhead Reduction**: Decreased from ~1.3s to ~0.05s per file (96% reduction)
 
 ### 🔧 Fixed
+- **Critical: Plugin-Key Manifest Entry**: Added required `pluginKey` configuration for SonarQube 2025.6.0+ compatibility
 - **Resource Leak**: Fixed ExecutorService cleanup to ensure proper shutdown in all exit paths
 - **Timeout Protection**: Maintained full timeout functionality while improving performance
 - **Circuit Breaker Integration**: Added proper executor cleanup when circuit breaker triggers

@@ -34,8 +34,8 @@ For older SonarQube installations, use the appropriate legacy plugin version (se
 
 SonarQube Version | Plugin Version | Status
 ------------------|----------------|--------
-2025.4+          | 3.2.0          | ✅ **Current** (Plugin API 12.0)
-2025.4+          | 3.0.0          | ✅ Supported
+2025.6+          | 3.2.0          | ✅ **Current** (Plugin API 12.0)
+2025.4 - 2025.5  | 3.0.0          | ✅ Supported
 9.0 - 9.1        | 2.2.0          | ⚠️ Legacy (Plugin API 9.x)
 7.6 - 8.9        | 2.1.1          | ⚠️ Legacy  
 5.6 - 7.5        | 1.5.0          | ⚠️ Legacy

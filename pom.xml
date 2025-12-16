@@ -139,6 +139,7 @@
                 <version>${sonar-packaging-maven-plugin.version}</version>
                 <extensions>true</extensions>
                 <configuration>
+                    <pluginKey>coldfusion</pluginKey>
                     <pluginClass>com.stepstone.sonar.plugin.coldfusion.ColdFusionPlugin</pluginClass>
                     <pluginName>ColdFusion</pluginName>
                     <pluginDescription>CFLint ${cflint.version} Plugin for SonarQube 2025.4+ with Enhanced Include Processing (cfmleditor/CFLint)</pluginDescription>
