@@ -73,6 +73,9 @@ public class CFLintAnalyzer {
     private final HTMLPreprocessor htmlPreprocessor;
     private final FallbackAnalyzer fallbackAnalyzer;
     
+    // Shared thread pool for timeout enforcement (optimization)
+    private ExecutorService timeoutExecutor;
+    
     // Configuration-driven parsing behavior (RIR-005)
     private final ParsingMode parsingMode;
     private final boolean skipMalformedFiles;
@@ -260,6 +263,9 @@ public class CFLintAnalyzer {
         Writer xmlwriter = null;
         
         try {
+            // Create shared thread pool for all file analyses (performance optimization)
+            timeoutExecutor = Executors.newSingleThreadExecutor();
+            
             xmlwriter = createXMLWriter(fs.workDir() + File.separator + "cflint-result.xml", StandardCharsets.UTF_8);
             
             // Write XML header for combined results
@@ -288,6 +294,11 @@ public class CFLintAnalyzer {
                 // Check if circuit breaker was triggered
                 if (circuitBreakerTriggered) {
                     logger.error("Circuit breaker triggered - stopping analysis early");
+                    
+                    // Cleanup executor before breaking
+                    if (timeoutExecutor != null) {
+                        timeoutExecutor.shutdownNow();
+                    }
                     break;
                 }
                 
@@ -304,6 +315,16 @@ public class CFLintAnalyzer {
             xmlwriter.write("</issues>\n");
             
         } finally {
+            // Cleanup shared executor service
+            if (timeoutExecutor != null) {
+                try {
+                    timeoutExecutor.shutdownNow();
+                    logger.debug("Shared timeout executor shutdown complete");
+                } catch (Exception e) {
+                    logger.warn("Error shutting down timeout executor: {}", e.getMessage());
+                }
+            }
+            
             if (xmlwriter != null) {
                 try {
                     xmlwriter.close();
@@ -325,7 +346,6 @@ public class CFLintAnalyzer {
      */
     private void analyzeIndividualFile(CFLintAPI linter, String filePath, Writer xmlwriter) {
         Path temporaryFile = null;
-        ExecutorService executor = Executors.newSingleThreadExecutor();
         
         try {
             logger.debug("Analyzing file: {} with {}s timeout", filePath, fileTimeout);
@@ -337,8 +357,8 @@ public class CFLintAnalyzer {
             }
             final String finalActualPath = actualFilePath;
             
-            // Submit analysis task with timeout protection
-            Future<CFLintResult> future = executor.submit(new Callable<CFLintResult>() {
+            // Submit analysis task to shared executor with timeout protection
+            Future<CFLintResult> future = timeoutExecutor.submit(new Callable<CFLintResult>() {
                 @Override
                 public CFLintResult call() throws Exception {
                     List<String> singleFile = new ArrayList<>();
@@ -374,8 +394,8 @@ public class CFLintAnalyzer {
             logger.warn("File analysis TIMEOUT after {}s: {} (consecutive timeouts: {})", 
                        fileTimeout, filePath, consecutiveTimeouts);
             
-            // Cancel the stuck task
-            executor.shutdownNow();
+            // Note: Stuck task will be interrupted when executor is shutdown at end of analysis
+            // We don't shutdown the shared executor here to allow other files to continue
             
             // Check circuit breaker threshold
             if (consecutiveTimeouts >= maxConsecutiveTimeouts) {
