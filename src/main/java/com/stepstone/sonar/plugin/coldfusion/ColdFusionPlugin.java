@@ -45,6 +45,8 @@ public class ColdFusionPlugin implements Plugin {
     public static final String HTML_PREPROCESSING = "sonar.cf.parsing.htmlPreprocessing";
     public static final String FALLBACK_ANALYSIS = "sonar.cf.parsing.fallbackAnalysis";
     public static final String FALLBACK_MAX_ISSUES = "sonar.cf.parsing.fallbackMaxIssues";
+    public static final String FILE_ANALYSIS_TIMEOUT = "sonar.cf.parsing.fileTimeout";
+    public static final String MAX_CONSECUTIVE_TIMEOUTS = "sonar.cf.parsing.maxConsecutiveTimeouts";
 
     @Override
     public void define(Context context) {
