@@ -28,6 +28,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.ExecutionException;
 import javax.xml.stream.XMLStreamException;
 
 import org.sonar.api.batch.fs.FileSystem;
@@ -71,12 +78,17 @@ public class CFLintAnalyzer {
     private final boolean skipMalformedFiles;
     private final String errorReportingLevel;
     private final int errorThreshold;
+    private final int fileTimeout;
+    private final int maxConsecutiveTimeouts;
     private final boolean legacySupport;
     
     // Error tracking for robustness reporting
     private int totalFiles = 0;
     private int successfullyParsedFiles = 0;
     private int failedFiles = 0;
+    private int timedOutFiles = 0;
+    private int consecutiveTimeouts = 0;
+    private boolean circuitBreakerTriggered = false;
 
     public CFLintAnalyzer(SensorContext sensorContext) {
         Preconditions.checkNotNull(sensorContext);
@@ -107,8 +119,12 @@ public class CFLintAnalyzer {
         int maxFallbackIssues = settings.getInt(ColdFusionPlugin.FALLBACK_MAX_ISSUES).orElse(50);
         this.fallbackAnalyzer = new FallbackAnalyzer(fallbackEnabled, maxFallbackIssues);
         
-        logger.info("CFLint Analyzer initialized with: mode={}, skipMalformed={}, legacySupport={}, errorThreshold={}%, preprocessing={}, fallback={}", 
-                   parsingMode, skipMalformedFiles, legacySupport, errorThreshold, preprocessingEnabled, fallbackEnabled);
+        // Initialize timeout settings
+        this.fileTimeout = settings.getInt(ColdFusionPlugin.FILE_ANALYSIS_TIMEOUT).orElse(30);
+        this.maxConsecutiveTimeouts = settings.getInt(ColdFusionPlugin.MAX_CONSECUTIVE_TIMEOUTS).orElse(10);
+        
+        logger.info("CFLint Analyzer initialized with: mode={}, skipMalformed={}, legacySupport={}, errorThreshold={}%, preprocessing={}, fallback={}, fileTimeout={}s, maxConsecutiveTimeouts={}", 
+                   parsingMode, skipMalformedFiles, legacySupport, errorThreshold, preprocessingEnabled, fallbackEnabled, fileTimeout, maxConsecutiveTimeouts);
     }
 
     public void analyze(File configFile) throws IOException, XMLStreamException {
@@ -264,8 +280,24 @@ public class CFLintAnalyzer {
                 throw new IOException("CFLint initialization failed", e);
             }
             
+            int fileCount = 0;
             for (String filePath : filesToScan) {
+                fileCount++;
                 analyzeIndividualFile(linter, filePath, xmlwriter);
+                
+                // Check if circuit breaker was triggered
+                if (circuitBreakerTriggered) {
+                    logger.error("Circuit breaker triggered - stopping analysis early");
+                    break;
+                }
+                
+                // Progress reporting every 100 files
+                if (fileCount % 100 == 0) {
+                    double percentComplete = (fileCount * 100.0) / totalFiles;
+                    logger.info("Progress: {}/{} files analyzed ({:.1f}%) - {} successful, {} failed, {} timeouts", 
+                               fileCount, totalFiles, percentComplete, 
+                               successfullyParsedFiles, failedFiles, timedOutFiles);
+                }
             }
             
             // Write XML footer
@@ -292,41 +324,36 @@ public class CFLintAnalyzer {
      * @param xmlwriter XML writer for results
      */
     private void analyzeIndividualFile(CFLintAPI linter, String filePath, Writer xmlwriter) {
-        String actualFilePath = filePath;
         Path temporaryFile = null;
+        ExecutorService executor = Executors.newSingleThreadExecutor();
         
         try {
-            logger.debug("Analyzing file: {}", filePath);
+            logger.debug("Analyzing file: {} with {}s timeout", filePath, fileTimeout);
             
-            // Apply HTML preprocessing if enabled
-            if (htmlPreprocessor.isEnabled()) {
-                try {
-                    String preprocessedContent = htmlPreprocessor.preprocessFile(filePath);
-                    
-                    // Only create temporary file if content was actually changed
-                    String originalContent = Files.readString(Paths.get(filePath), StandardCharsets.UTF_8);
-                    if (!preprocessedContent.equals(originalContent)) {
-                        temporaryFile = htmlPreprocessor.createTemporaryPreprocessedFile(filePath, preprocessedContent);
-                        actualFilePath = temporaryFile.toString();
-                        logger.debug("Using preprocessed file for analysis: {} -> {}", filePath, actualFilePath);
-                    }
-                } catch (Exception preprocessException) {
-                    logger.warn("Preprocessing failed for file {}: {} - Using original file", 
-                               filePath, preprocessException.getMessage());
-                    // Continue with original file if preprocessing fails
-                }
+            // Prepare file path (with preprocessing if enabled)
+            final String actualFilePath = prepareFileForAnalysis(filePath);
+            if (actualFilePath.startsWith("/tmp/sonar_preprocessed_")) {
+                temporaryFile = Paths.get(actualFilePath);
             }
+            final String finalActualPath = actualFilePath;
             
-            List<String> singleFile = new ArrayList<>();
-            singleFile.add(actualFilePath);
+            // Submit analysis task with timeout protection
+            Future<CFLintResult> future = executor.submit(new Callable<CFLintResult>() {
+                @Override
+                public CFLintResult call() throws Exception {
+                    List<String> singleFile = new ArrayList<>();
+                    singleFile.add(finalActualPath);
+                    return linter.scan(singleFile);
+                }
+            });
             
-            CFLintResult result = linter.scan(singleFile);
+            // Wait for result with timeout
+            CFLintResult result = future.get(fileTimeout, TimeUnit.SECONDS);
             
-            // Extract and write individual file results (simplified XML extraction)
-            // This is a basic implementation - in production, we'd need proper XML parsing
+            // Extract and write individual file results
             String resultXml = getResultXmlContent(result);
             if (resultXml != null && !resultXml.trim().isEmpty()) {
-                // If we used a temporary file, we need to replace its path with the original in results
+                // Replace temporary file path with original if preprocessing was used
                 if (temporaryFile != null) {
                     resultXml = resultXml.replace(temporaryFile.toString(), filePath);
                 }
@@ -335,7 +362,90 @@ public class CFLintAnalyzer {
             }
             
             successfullyParsedFiles++;
+            consecutiveTimeouts = 0; // Reset on success
             logger.debug("Successfully analyzed file: {}", filePath);
+            
+        } catch (TimeoutException e) {
+            // File analysis timed out
+            failedFiles++;
+            timedOutFiles++;
+            consecutiveTimeouts++;
+            
+            logger.warn("File analysis TIMEOUT after {}s: {} (consecutive timeouts: {})", 
+                       fileTimeout, filePath, consecutiveTimeouts);
+            
+            // Cancel the stuck task
+            executor.shutdownNow();
+            
+            // Check circuit breaker threshold
+            if (consecutiveTimeouts >= maxConsecutiveTimeouts) {
+                String errorMsg = String.format(
+                    "Circuit breaker triggered: %d consecutive timeouts exceeded threshold of %d. "
+                    + "This indicates systematic issues with CFLint parsing your codebase. "
+                    + "Consider increasing sonar.cf.parsing.fileTimeout or reviewing problematic files.",
+                    consecutiveTimeouts, maxConsecutiveTimeouts);
+                logger.error(errorMsg);
+                
+                // Record circuit breaker error
+                errorCollector.addError(filePath, new IOException(errorMsg));
+                
+                // Write timeout comment to XML for visibility
+                writeTimeoutComment(xmlwriter, filePath, "CIRCUIT_BREAKER_TRIGGERED");
+                
+                // Set flag to stop processing after this file
+                circuitBreakerTriggered = true;
+                return; // Exit this file's analysis
+            }
+            
+            // Record timeout error
+            errorCollector.addError(filePath, e);
+            
+            // Write timeout comment to XML
+            writeTimeoutComment(xmlwriter, filePath, "ANALYSIS_TIMEOUT");
+            
+            // Attempt fallback analysis
+            attemptFallbackAfterTimeout(filePath, xmlwriter);
+            
+        } catch (InterruptedException e) {
+            failedFiles++;
+            logger.warn("File analysis interrupted: {}", filePath);
+            categorizeAndRecordError(filePath, e);
+            Thread.currentThread().interrupt();
+            
+        } catch (ExecutionException e) {
+            // Analysis threw an exception (not a timeout)
+            failedFiles++;
+            consecutiveTimeouts = 0; // Reset - this is a different kind of error
+            
+            Throwable cause = e.getCause();
+            logger.warn("File analysis failed: {} - Error: {}", filePath, 
+                       cause != null ? cause.getMessage() : e.getMessage());
+            
+            // Handle as normal error - convert Throwable to Exception
+            Exception exceptionToRecord = (cause instanceof Exception) ? (Exception) cause : e;
+            categorizeAndRecordError(filePath, exceptionToRecord);
+            
+            // Attempt fallback analysis
+            String fallbackResults = attemptFallbackAnalysis(filePath);
+            if (fallbackResults != null && !fallbackResults.trim().isEmpty()) {
+                try {
+                    xmlwriter.write(fallbackResults);
+                    xmlwriter.write("\n");
+                } catch (IOException fallbackWriteException) {
+                    logger.warn("Failed to write fallback results for {}: {}", 
+                               filePath, fallbackWriteException.getMessage());
+                }
+            }
+            
+            // Write error comment
+            try {
+                xmlwriter.write(String.format("<!-- PARSING_ERROR: File=%s, Error=%s, Type=%s -->\n", 
+                                            filePath, 
+                                            (cause != null ? cause.getMessage() : e.getMessage()).replaceAll("--", "- -"),
+                                            categorizeErrorType(exceptionToRecord)));
+            } catch (IOException ioException) {
+                logger.error("Failed to write error comment for {}: {}", filePath, ioException.getMessage());
+            }
             
         } catch (Exception e) {
             failedFiles++;
@@ -643,6 +753,63 @@ public class CFLintAnalyzer {
             throw new IOException(e);
         }
         return out;
+    }
+    
+    /**
+     * Prepares a file for analysis by applying preprocessing if enabled.
+     * Returns the path to analyze (either original or preprocessed temporary file).
+     */
+    private String prepareFileForAnalysis(String filePath) throws IOException {
+        if (!htmlPreprocessor.isEnabled()) {
+            return filePath;
+        }
+        
+        try {
+            String preprocessedContent = htmlPreprocessor.preprocessFile(filePath);
+            
+            // Only create temporary file if content was actually changed
+            String originalContent = Files.readString(Paths.get(filePath), StandardCharsets.UTF_8);
+            if (!preprocessedContent.equals(originalContent)) {
+                Path temporaryFile = htmlPreprocessor.createTemporaryPreprocessedFile(filePath, preprocessedContent);
+                logger.debug("Using preprocessed file for analysis: {} -> {}", filePath, temporaryFile);
+                return temporaryFile.toString();
+            }
+        } catch (Exception preprocessException) {
+            logger.warn("Preprocessing failed for file {}: {} - Using original file", 
+                       filePath, preprocessException.getMessage());
+        }
+        
+        return filePath;
+    }
+    
+    /**
+     * Writes a timeout comment to the XML output for visibility in SonarQube.
+     */
+    private void writeTimeoutComment(Writer xmlwriter, String filePath, String timeoutType) {
+        try {
+            xmlwriter.write(String.format(
+                "<!-- TIMEOUT: File=%s, Type=%s, Timeout=%ds, ConsecutiveTimeouts=%d -->\\n", 
+                filePath, timeoutType, fileTimeout, consecutiveTimeouts));
+        } catch (IOException e) {
+            logger.debug("Failed to write timeout comment for {}: {}", filePath, e.getMessage());
+        }
+    }
+    
+    /**
+     * Attempts fallback analysis after a timeout occurs.
+     */
+    private void attemptFallbackAfterTimeout(String filePath, Writer xmlwriter) {
+        String fallbackResults = attemptFallbackAnalysis(filePath);
+        if (fallbackResults != null && !fallbackResults.trim().isEmpty()) {
+            try {
+                xmlwriter.write(fallbackResults);
+                xmlwriter.write("\\n");
+                logger.debug("Fallback analysis provided results after timeout for: {}", filePath);
+            } catch (IOException fallbackWriteException) {
+                logger.warn("Failed to write fallback results after timeout for {}: {}", 
+                           filePath, fallbackWriteException.getMessage());
+            }
+        }
     }
 
 }
