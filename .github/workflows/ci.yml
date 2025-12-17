@@ -128,9 +128,10 @@ jobs:
     name: Integration Test
     runs-on: ubuntu-latest
     needs: build-and-test
+    if: github.event_name == 'release'
     services:
       postgres:
-        image: postgres:13
+        image: postgres:16-alpine
         env:
           POSTGRES_PASSWORD: sonarpass
           POSTGRES_USER: sonar
