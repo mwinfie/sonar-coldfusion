@@ -355,7 +355,27 @@ jobs:
 
     - name: Find JAR file
       id: jar
-      run: echo "jar_file=$(find target -name '*.jar' -type f | head -1)" >> $GITHUB_OUTPUT
+      run: |
+        # Find the plugin JAR (not dependency JARs) - should match pattern: sonar-coldfusion-plugin-*.jar
+        jar_file=$(find target -maxdepth 1 -name 'sonar-coldfusion-plugin-*.jar' -type f | head -1)
+        if [ -z "$jar_file" ]; then
+          echo "ERROR: Plugin JAR not found in target/"
+          ls -la target/
+          exit 1
+        fi
+        echo "Found plugin JAR: $jar_file"
+        echo "jar_file=$jar_file" >> $GITHUB_OUTPUT
+
+    - name: Verify JAR is valid SonarQube plugin
+      run: |
+        echo "Verifying plugin manifest..."
+        unzip -p ${{ steps.jar.outputs.jar_file }} META-INF/MANIFEST.MF | grep -E "(Plugin-Key|Plugin-Version|Plugin-Name)" || {
+          echo "ERROR: JAR does not contain valid SonarQube plugin manifest"
+          exit 1
+        }
+        
+        echo "JAR size:"
+        ls -lh ${{ steps.jar.outputs.jar_file }}
 
     - name: Upload release artifact
       uses: actions/upload-release-asset@v1
@@ -370,7 +390,8 @@ jobs:
     - name: Create deployment package
       run: |
         mkdir -p deployment
-        cp target/*.jar deployment/
+        # Copy only the plugin JAR, not dependency JARs
+        cp ${{ steps.jar.outputs.jar_file }} deployment/
         cp README.md deployment/
         cp LICENSE deployment/
         tar -czf deployment-package.tar.gz deployment/
