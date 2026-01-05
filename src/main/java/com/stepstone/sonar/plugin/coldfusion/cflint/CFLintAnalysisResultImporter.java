@@ -132,8 +132,8 @@ public class CFLintAnalysisResultImporter {
                 return;
             }
             
-            // If resolution failed, log the error and return
-            logger.error("Problem creating issue for file {}, issue is line {} but file has {} lines", 
+            // If resolution failed, log at DEBUG level (expected for inlined includes)
+            logger.debug("Skipping issue for file {} - line {} exceeds file lines {} (likely from CFLint include inlining)", 
                         inputFile, locationAttributes.getLine().get(), inputFile.lines());
             return;
         }
@@ -201,7 +201,8 @@ public class CFLintAnalysisResultImporter {
                 
                 return true;
             } else {
-                logger.warn("Could not resolve virtual line number {} in file {}", 
+                // Expected for CFLint inlined includes - log at DEBUG to reduce noise
+                logger.debug("Could not resolve virtual line number {} in file {}", 
                            locationAttributes.getLine().get(), inputFile.filename());
                 return false;
             }

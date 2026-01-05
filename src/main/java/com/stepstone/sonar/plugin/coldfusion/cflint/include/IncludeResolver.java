@@ -104,7 +104,8 @@ public class IncludeResolver {
         }
         
         // Could not resolve - might be beyond all includes
-        logger.warn("Could not resolve virtual line {} in file {} (file has {} lines, {} include mappings)", 
+        // This is expected when CFLint inlines includes - log at DEBUG to reduce noise
+        logger.debug("Could not resolve virtual line {} in file {} (file has {} lines, {} include mappings)", 
                    virtualLineNumber, mainFile.filename(), mainFile.lines(), mappings.size());
         
         return null;
