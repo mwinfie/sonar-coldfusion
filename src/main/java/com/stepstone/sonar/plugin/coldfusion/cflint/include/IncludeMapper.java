@@ -76,7 +76,7 @@ public class IncludeMapper {
         // Prevent infinite recursion
         String filePath = file.absolutePath();
         if (includeStack.contains(filePath)) {
-            logger.warn("Circular include detected: {} -> {}", String.join(" -> ", includeStack), filePath);
+            logger.debug("Circular include detected: {} -> {}", String.join(" -> ", includeStack), filePath);
             return currentVirtualLine;
         }
         
@@ -119,7 +119,7 @@ public class IncludeMapper {
                         virtualLineCounter = includeEndLine;
                         
                     } else {
-                        logger.warn("Could not resolve include template '{}' in file {}", 
+                        logger.debug("Could not resolve include template '{}' in file {}", 
                                   templatePath, file.filename());
                     }
                 } else {
