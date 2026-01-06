@@ -45,6 +45,12 @@ public class CFLintAnalysisResultImporter {
     private final IncludeResolver includeResolver;
     private XMLStreamReader stream;
     private final Logger logger = Loggers.get(CFLintAnalysisResultImporter.class);
+    
+    // Performance tracking
+    private int totalIssuesProcessed = 0;
+    private int issuesCreated = 0;
+    private int issuesSkippedVirtualLines = 0;
+    private int lastReportedProgress = 0;
 
     public CFLintAnalysisResultImporter(FileSystem fs, SensorContext sensorContext) {
         this.fs = fs;
@@ -54,6 +60,9 @@ public class CFLintAnalysisResultImporter {
 
     public void parse(File file) throws IOException, XMLStreamException {
 
+        logger.info("Starting to import CFLint analysis results from {}", file.getName());
+        long startTime = System.currentTimeMillis();
+        
         try (FileReader reader = new FileReader(file)) {
             parse(reader);
         } catch (XMLStreamException | IOException e) {
@@ -61,6 +70,10 @@ public class CFLintAnalysisResultImporter {
             throw e;
         } finally {
             closeXmlStream();
+            
+            long duration = System.currentTimeMillis() - startTime;
+            logger.info("CFLint result import completed in {}ms: {} issues processed, {} created, {} skipped (virtual lines)", 
+                       duration, totalIssuesProcessed, issuesCreated, issuesSkippedVirtualLines);
         }
     }
 
@@ -86,6 +99,10 @@ public class CFLintAnalysisResultImporter {
     }
 
     private void handleIssueTag(IssueAttributes issueAttributes) throws XMLStreamException {
+        // Only process the FIRST location for each issue to avoid creating thousands
+        // of duplicate issues for the same rule violation
+        boolean firstLocationProcessed = false;
+        
         while (stream.hasNext()) {
             int next = stream.next();
 
@@ -99,48 +116,56 @@ public class CFLintAnalysisResultImporter {
                 if ("location".equals(tagName)) {
                     LocationAttributes locationAttributes = new LocationAttributes(stream);
 
-                    InputFile inputFile = fs.inputFile(fs.predicates().hasAbsolutePath(locationAttributes.getFile()));
-                    createNewIssue(issueAttributes, locationAttributes, inputFile);
+                    // Only create issue for the first location
+                    if (!firstLocationProcessed) {
+                        InputFile inputFile = fs.inputFile(fs.predicates().hasAbsolutePath(locationAttributes.getFile()));
+                        createNewIssue(issueAttributes, locationAttributes, inputFile);
+                        firstLocationProcessed = true;
+                    }
                 }
             }
         }
     }
 
     private void createNewIssue(IssueAttributes issueAttributes, LocationAttributes locationAttributes, InputFile inputFile) {
-        if(issueAttributes == null){
-            logger.debug("Problem creating issue for file {} issueAttributes is null", inputFile);
+        totalIssuesProcessed++;
+        
+        // Report progress every 10,000 issues to show activity
+        if (totalIssuesProcessed - lastReportedProgress >= 10000) {
+            logger.info("Import progress: {} issues processed, {} created, {} skipped", 
+                       totalIssuesProcessed, issuesCreated, issuesSkippedVirtualLines);
+            lastReportedProgress = totalIssuesProcessed;
         }
-        if(locationAttributes == null){
-            logger.debug("Problem creating issue for file {} locationAttributes is null", inputFile);
-        }
-        if(inputFile==null){
-            logger.debug("Problem creating issue for file inputFile is null");
-        }
+        
         if(issueAttributes == null || locationAttributes == null || inputFile == null){
+            logger.debug("Skipping issue - missing attributes");
             return;
         }
 
-        // Enhanced virtual line number detection and resolution
+        // Quick check: Enhanced virtual line number detection and resolution
         if(locationAttributes.getLine().isPresent() && locationAttributes.getLine().get() > inputFile.lines()){
-            logger.debug("Virtual line number detected - issue line {} > file lines {}", 
-                       locationAttributes.getLine().get(), inputFile.lines());
+            // Virtual line from CFLint include inlining - skip without detailed logging
+            issuesSkippedVirtualLines++;
             
-            // Try to resolve virtual line number using include processing
-            boolean resolved = handleIncludeProcessingIssue(issueAttributes, locationAttributes, inputFile);
-            if (resolved) {
-                logger.debug("Successfully resolved virtual line number using include processing");
-                return;
+            // Only try to resolve if we haven't hit a threshold of skipped issues
+            // This avoids expensive resolution attempts for files with thousands of virtual lines
+            if (issuesSkippedVirtualLines < 1000 || issuesSkippedVirtualLines % 1000 == 0) {
+                boolean resolved = handleIncludeProcessingIssue(issueAttributes, locationAttributes, inputFile);
+                if (resolved) {
+                    issuesCreated++;
+                    return;
+                }
             }
-            
-            // If resolution failed, log at DEBUG level (expected for inlined includes)
-            logger.debug("Skipping issue for file {} - line {} exceeds file lines {} (likely from CFLint include inlining)", 
-                        inputFile, locationAttributes.getLine().get(), inputFile.lines());
             return;
         }
 
-        logger.debug("create New Issue {} for file {}", issueAttributes, inputFile.filename());
+        // Create normal issue (not virtual)
+        logger.debug("Creating issue for {} at line {} in {}", 
+                    issueAttributes.getId().orElse("unknown"), 
+                    locationAttributes.getLine().get(), 
+                    inputFile.filename());
+        
         final NewIssue issue = sensorContext.newIssue();
-
         final NewIssueLocation issueLocation = issue.newLocation();
         issueLocation.on(inputFile);
         issueLocation.at(inputFile.selectLine(locationAttributes.getLine().get()));
@@ -149,6 +174,7 @@ public class CFLintAnalysisResultImporter {
         issue.forRule(RuleKey.of(ColdFusionPlugin.REPOSITORY_KEY, issueAttributes.getId().get()));
         issue.at(issueLocation);
         issue.save();
+        issuesCreated++;
     }
 
     /**
