@@ -60,7 +60,11 @@ public class CFLintAnalysisResultImporter {
 
     public void parse(File file) throws IOException, XMLStreamException {
 
+        // Count total issues first to provide progress visibility
+        int totalIssues = countTotalIssues(file);
+        
         logger.info("Starting to import CFLint analysis results from {}", file.getName());
+        logger.info("Total issues found in CFLint XML: {}", totalIssues);
         long startTime = System.currentTimeMillis();
         
         try (FileReader reader = new FileReader(file)) {
@@ -75,6 +79,28 @@ public class CFLintAnalysisResultImporter {
             logger.info("CFLint result import completed in {}ms: {} issues processed, {} created, {} skipped (virtual lines)", 
                        duration, totalIssuesProcessed, issuesCreated, issuesSkippedVirtualLines);
         }
+    }
+    
+    private int countTotalIssues(File file) {
+        int count = 0;
+        try (FileReader reader = new FileReader(file)) {
+            XMLInputFactory factory = XMLInputFactory.newInstance();
+            factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, Boolean.FALSE);
+            factory.setProperty(XMLInputFactory.SUPPORT_DTD, Boolean.FALSE);
+            XMLStreamReader countStream = factory.createXMLStreamReader(reader);
+            
+            while (countStream.hasNext()) {
+                if (countStream.next() == XMLStreamConstants.START_ELEMENT) {
+                    if ("issue".equals(countStream.getLocalName())) {
+                        count++;
+                    }
+                }
+            }
+            countStream.close();
+        } catch (Exception e) {
+            logger.warn("Could not count total issues, will proceed without total: {}", e.getMessage());
+        }
+        return count;
     }
 
     private void parse(FileReader reader) throws XMLStreamException {
