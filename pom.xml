@@ -6,7 +6,7 @@
     <groupId>com.stepstone.sonar.plugin</groupId>
     <artifactId>sonar-coldfusion-plugin</artifactId>
     <packaging>sonar-plugin</packaging>
-    <version>3.2.3</version>
+    <version>3.2.4</version>
 
     <name>SonarQube ColdFusion Plugin</name>
     <description>Enables scanning of ColdFusion source files</description>

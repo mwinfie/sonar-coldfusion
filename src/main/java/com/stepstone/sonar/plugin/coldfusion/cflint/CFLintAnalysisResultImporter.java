@@ -128,6 +128,11 @@ public class CFLintAnalysisResultImporter {
     }
 
     private void createNewIssue(IssueAttributes issueAttributes, LocationAttributes locationAttributes, InputFile inputFile) {
+        // Check for missing attributes first, before counting
+        if(issueAttributes == null || locationAttributes == null || inputFile == null){
+            return;
+        }
+        
         totalIssuesProcessed++;
         
         // Report progress every 10,000 issues to show activity
@@ -135,11 +140,6 @@ public class CFLintAnalysisResultImporter {
             logger.info("Import progress: {} issues processed, {} created, {} skipped", 
                        totalIssuesProcessed, issuesCreated, issuesSkippedVirtualLines);
             lastReportedProgress = totalIssuesProcessed;
-        }
-        
-        if(issueAttributes == null || locationAttributes == null || inputFile == null){
-            logger.debug("Skipping issue - missing attributes");
-            return;
         }
 
         // Quick check: Enhanced virtual line number detection and resolution
@@ -160,11 +160,6 @@ public class CFLintAnalysisResultImporter {
         }
 
         // Create normal issue (not virtual)
-        logger.debug("Creating issue for {} at line {} in {}", 
-                    issueAttributes.getId().orElse("unknown"), 
-                    locationAttributes.getLine().get(), 
-                    inputFile.filename());
-        
         final NewIssue issue = sensorContext.newIssue();
         final NewIssueLocation issueLocation = issue.newLocation();
         issueLocation.on(inputFile);
