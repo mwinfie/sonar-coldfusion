@@ -60,11 +60,47 @@ public class CFLintAnalysisResultImporter {
 
     public void parse(File file) throws IOException, XMLStreamException {
 
-        // Count total issues first to provide progress visibility
-        int totalIssues = countTotalIssues(file);
-        
         logger.info("Starting to import CFLint analysis results from {}", file.getName());
-        logger.info("Total issues found in CFLint XML: {}", totalIssues);
+        
+        // Check file size first - only count issues for reasonable files
+        long fileSizeMB = file.length() / (1024 * 1024);
+        logger.info("CFLint XML file size: {}MB", fileSizeMB);
+        
+        // EMERGENCY: Abort if file is massive (indicates CFLint inline include explosion)
+        if (fileSizeMB > 1000) {
+            String errorMsg = String.format(
+                "CRITICAL: CFLint XML file is %dMB! This indicates CFLint ran with inline include processing, " +
+                "generating millions of issues. ABORTING import to prevent hours-long processing. " +
+                "Solution: Check CFLint configuration to disable inline includes, or delete .scannerwork and rerun.", 
+                fileSizeMB
+            );
+            logger.error(errorMsg);
+            throw new IllegalStateException(errorMsg);
+        }
+        
+        // Only count issues for reasonably sized files (< 100MB)
+        int totalIssues = 0;
+        if (fileSizeMB < 100) {
+            totalIssues = countTotalIssues(file);
+            if (totalIssues > 0) {
+                logger.info("Total issues found in CFLint XML: {} (file size: {}MB)", totalIssues, fileSizeMB);
+                
+                // EMERGENCY: Abort if issue count is absurdly high
+                if (totalIssues > 1000000) {
+                    String errorMsg = String.format(
+                        "CRITICAL: CFLint generated %d issues! This is abnormal (expected ~170K for 2944 files). " +
+                        "This indicates inline include processing created an issue explosion. ABORTING import. " +
+                        "Solution: Fix CFLint configuration to disable inline includes.", 
+                        totalIssues
+                    );
+                    logger.error(errorMsg);
+                    throw new IllegalStateException(errorMsg);
+                }
+            }
+        } else {
+            logger.warn("Skipping issue count for large file ({}MB) - would delay import", fileSizeMB);
+        }
+        
         long startTime = System.currentTimeMillis();
         
         try (FileReader reader = new FileReader(file)) {
