@@ -6,7 +6,7 @@
     <groupId>com.stepstone.sonar.plugin</groupId>
     <artifactId>sonar-coldfusion-plugin</artifactId>
     <packaging>sonar-plugin</packaging>
-    <version>3.2.5</version>
+    <version>3.2.7</version>
 
     <name>SonarQube ColdFusion Plugin</name>
     <description>Enables scanning of ColdFusion source files</description>
@@ -42,18 +42,18 @@
         
         <!-- Updated for SonarQube 2025.4 compatibility -->
         <sonar.plugin.api.version>12.0.0.2960</sonar.plugin.api.version>
-        <cflint.version>1.5.9</cflint.version>
+        <cflint.version>1.5.10-SNAPSHOT</cflint.version>
         <sonar-analyzer-commons.version>2.18.0.3393</sonar-analyzer-commons.version>
         
         <!-- Plugin packaging version -->
         <sonar-packaging-maven-plugin.version>1.23.0.740</sonar-packaging-maven-plugin.version>
     </properties>
 
-    <!-- Repositories for cfmleditor/CFLint from GitHub Packages -->
+    <!-- Repositories for mwinfie/CFLint from GitHub Packages (fork with skipIncludes fix) -->
     <repositories>
         <repository>
             <id>github</id>
-            <url>https://maven.pkg.github.com/cfmleditor/CFLint</url>
+            <url>https://maven.pkg.github.com/mwinfie/CFLint</url>
             <releases>
                 <enabled>true</enabled>
             </releases>
@@ -123,11 +123,11 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- CFLint dependency - cfmleditor fork 1.5.9 -->
+        <!-- CFLint dependency - mwinfie fork 1.5.10-SNAPSHOT with skipIncludes fix -->
         <dependency>
-            <groupId>com.github.cfmleditor</groupId>
+            <groupId>com.github.mwinfie</groupId>
             <artifactId>cflint</artifactId>
-            <version>1.5.9</version>
+            <version>1.5.10-SNAPSHOT</version>
         </dependency> 
     </dependencies>
 
@@ -142,7 +142,7 @@
                     <pluginKey>coldfusion</pluginKey>
                     <pluginClass>com.stepstone.sonar.plugin.coldfusion.ColdFusionPlugin</pluginClass>
                     <pluginName>ColdFusion</pluginName>
-                    <pluginDescription>CFLint ${cflint.version} Plugin for SonarQube 2025.4+ with Enhanced Include Processing (cfmleditor/CFLint)</pluginDescription>
+                    <pluginDescription>CFLint ${cflint.version} Plugin for SonarQube 2025.4+ with skipIncludes Fix (mwinfie/CFLint fork)</pluginDescription>
                     <pluginSourcesUrl>https://github.com/mwinfie/sonar-coldfusion</pluginSourcesUrl>
                     <requiredForLanguages>cf</requiredForLanguages>
                     <pluginApiMinVersion>12.0</pluginApiMinVersion>

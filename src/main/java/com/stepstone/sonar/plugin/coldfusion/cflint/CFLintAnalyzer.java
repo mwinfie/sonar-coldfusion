@@ -182,6 +182,7 @@ public class CFLintAnalyzer {
                 cflintConfigBuilder.addCustomConfig(configFile.getPath());
                 linter = new CFLintAPI(cflintConfigBuilder.build());
                 linter.setVerbose(false); // Reduce verbosity to minimize log noise
+                linter.setSkipIncludes(true); // Skip recursive include processing to prevent exponential issue growth
             } catch (Exception configException) {
                 logger.error("Failed to initialize CFLint configuration for batch analysis: {}", configException.getMessage());
                 throw new Exception("CFLint configuration failed", configException);
@@ -281,6 +282,7 @@ public class CFLintAnalyzer {
                 cflintConfigBuilder.addCustomConfig(configFile.getPath());
                 linter = new CFLintAPI(cflintConfigBuilder.build());
                 linter.setVerbose(true);
+                linter.setSkipIncludes(true); // Skip recursive include processing to prevent exponential issue growth
             } catch (Exception e) {
                 logger.error("Failed to initialize CFLint API for individual file analysis: {}", e.getMessage());
                 throw new IOException("CFLint initialization failed", e);
