@@ -49,11 +49,24 @@
         <sonar-packaging-maven-plugin.version>1.23.0.740</sonar-packaging-maven-plugin.version>
     </properties>
 
-    <!-- Repositories for mwinfie/CFLint from GitHub Packages (fork with skipIncludes fix) -->
+    <!-- GitHub Packages repositories for mwinfie/CFLint and its transitive
+         dependency cfmleditor/cfparser (cfml.parsing). Both use the same
+         GitHub token; distinct IDs are needed to avoid Maven deduplication.
+         The CI workflow settings.xml must define a server entry for each ID. -->
     <repositories>
         <repository>
-            <id>github</id>
+            <id>github-cflint</id>
             <url>https://maven.pkg.github.com/mwinfie/CFLint</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>github-cfparser</id>
+            <url>https://maven.pkg.github.com/cfmleditor/cfparser</url>
             <releases>
                 <enabled>true</enabled>
             </releases>

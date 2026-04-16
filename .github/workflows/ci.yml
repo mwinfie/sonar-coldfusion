@@ -38,7 +38,7 @@ jobs:
 
     - name: Authenticate to GitHub Packages
       run: |
-        echo "<settings><servers><server><id>github</id><username>${{ github.actor }}</username><password>${{ secrets.GITHUB_TOKEN }}</password></server></servers></settings>" > ~/.m2/settings.xml
+        echo "<settings><servers><server><id>github-cflint</id><username>${{ github.actor }}</username><password>${{ secrets.GITHUB_TOKEN }}</password></server><server><id>github-cfparser</id><username>${{ github.actor }}</username><password>${{ secrets.GITHUB_TOKEN }}</password></server></servers></settings>" > ~/.m2/settings.xml
 
     - name: Cache Maven packages
       uses: actions/cache@v4
@@ -93,7 +93,7 @@ jobs:
 
     - name: Authenticate to GitHub Packages
       run: |
-        echo "<settings><servers><server><id>github</id><username>${{ github.actor }}</username><password>${{ secrets.GITHUB_TOKEN }}</password></server></servers></settings>" > ~/.m2/settings.xml
+        echo "<settings><servers><server><id>github-cflint</id><username>${{ github.actor }}</username><password>${{ secrets.GITHUB_TOKEN }}</password></server><server><id>github-cfparser</id><username>${{ github.actor }}</username><password>${{ secrets.GITHUB_TOKEN }}</password></server></servers></settings>" > ~/.m2/settings.xml
 
     - name: Cache Maven packages
       uses: actions/cache@v4
@@ -156,7 +156,7 @@ jobs:
 
     - name: Authenticate to GitHub Packages
       run: |
-        echo "<settings><servers><server><id>github</id><username>${{ github.actor }}</username><password>${{ secrets.GITHUB_TOKEN }}</password></server></servers></settings>" > ~/.m2/settings.xml
+        echo "<settings><servers><server><id>github-cflint</id><username>${{ github.actor }}</username><password>${{ secrets.GITHUB_TOKEN }}</password></server><server><id>github-cfparser</id><username>${{ github.actor }}</username><password>${{ secrets.GITHUB_TOKEN }}</password></server></servers></settings>" > ~/.m2/settings.xml
 
     - name: Download plugin artifact
       uses: actions/download-artifact@v4
@@ -342,7 +342,7 @@ jobs:
 
     - name: Authenticate to GitHub Packages
       run: |
-        echo "<settings><servers><server><id>github</id><username>${{ github.actor }}</username><password>${{ secrets.GITHUB_TOKEN }}</password></server></servers></settings>" > ~/.m2/settings.xml
+        echo "<settings><servers><server><id>github-cflint</id><username>${{ github.actor }}</username><password>${{ secrets.GITHUB_TOKEN }}</password></server><server><id>github-cfparser</id><username>${{ github.actor }}</username><password>${{ secrets.GITHUB_TOKEN }}</password></server></servers></settings>" > ~/.m2/settings.xml
 
     - name: Cache Maven packages
       uses: actions/cache@v4
