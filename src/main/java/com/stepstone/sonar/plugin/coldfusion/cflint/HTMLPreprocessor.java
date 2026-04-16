@@ -226,7 +226,7 @@ public class HTMLPreprocessor {
             
             // Add quotes around unquoted attribute values
             String replacement = tagStart + " " + attrName + "=\"" + attrValue + "\"";
-            matcher.appendReplacement(result, replacement);
+            matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
             fixCount++;
         }
         matcher.appendTail(result);
@@ -256,7 +256,7 @@ public class HTMLPreprocessor {
             if (scriptContent.toLowerCase().contains("<cf")) {
                 String replacement = "<script type=\"text/javascript\">\n//<![CDATA[\n" + 
                                    scriptContent + "\n//]]>\n</script>";
-                matcher.appendReplacement(result, replacement);
+            matcher.appendReplacement(result, Matcher.quoteReplacement("<" + tagContent + " />"));
                 fixCount++;
             }
         }

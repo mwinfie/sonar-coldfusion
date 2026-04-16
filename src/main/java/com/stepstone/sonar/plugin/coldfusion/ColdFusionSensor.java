@@ -112,7 +112,7 @@ public class ColdFusionSensor implements Sensor {
         try {
             new CFLintAnalysisResultImporter(fs, sensorContext).parse(new File(fs.workDir(), "cflint-result.xml"));
         } catch (XMLStreamException e) {
-            LOGGER.error(",e");
+            LOGGER.error("Failed to parse CFLint results XML", e);
         } finally {
             deleteFile(new File(fs.workDir(), "cflint-result.xml"));
         }

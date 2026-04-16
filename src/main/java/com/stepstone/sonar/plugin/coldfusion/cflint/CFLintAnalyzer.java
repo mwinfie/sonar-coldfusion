@@ -307,8 +307,8 @@ public class CFLintAnalyzer {
                 // Progress reporting every 100 files
                 if (fileCount % 100 == 0) {
                     double percentComplete = (fileCount * 100.0) / totalFiles;
-                    logger.info("Progress: {}/{} files analyzed ({:.1f}%) - {} successful, {} failed, {} timeouts", 
-                               fileCount, totalFiles, percentComplete, 
+                    logger.info("Progress: {}/{} files analyzed ({}%) - {} successful, {} failed, {} timeouts", 
+                               fileCount, totalFiles, String.format("%.1f", percentComplete),
                                successfullyParsedFiles, failedFiles, timedOutFiles);
                 }
             }
@@ -635,9 +635,11 @@ public class CFLintAnalyzer {
             result.writeXml(stringWriter);
             String fullXml = stringWriter.toString();
             
-            // Extract just the issue elements (skip XML declaration and root element)
-            // This is a basic implementation - production code would use proper XML parsing
-            int issuesStart = fullXml.indexOf("<issue");
+            // Extract just the individual issue elements (skip XML declaration and root <issues> wrapper).
+            // Use "<issue " (with trailing space) to avoid matching the "<issues" root element,
+            // which also starts with "<issue" but must not be included - it would be embedded
+            // without its closing </issues> tag, producing malformed nested XML in the combined output.
+            int issuesStart = fullXml.indexOf("<issue ");
             int issuesEnd = fullXml.lastIndexOf("</issue>") + 8;
             
             if (issuesStart >= 0 && issuesEnd > issuesStart) {
@@ -663,12 +665,12 @@ public class CFLintAnalyzer {
             logger.info("CFLint analysis completed successfully: {}/{} files analyzed (100%)", 
                        successfullyParsedFiles, totalFiles);
         } else {
-            logger.warn("CFLint analysis completed with partial success: {}/{} files analyzed ({:.1f}%), {} files failed", 
-                       successfullyParsedFiles, totalFiles, successRate, failedFiles);
+            logger.warn("CFLint analysis completed with partial success: {}/{} files analyzed ({}%), {} files failed", 
+                       successfullyParsedFiles, totalFiles, String.format("%.1f", successRate), failedFiles);
             
             if (successRate < 85) {
-                logger.error("CFLint analysis success rate ({:.1f}%) is below recommended threshold (85%). " +
-                           "Consider reviewing failed files for common HTML/CFML structure issues.", successRate);
+                logger.error("CFLint analysis success rate ({}%) is below recommended threshold (85%). " +
+                           "Consider reviewing failed files for common HTML/CFML structure issues.", String.format("%.1f", successRate));
             }
         }
         
@@ -714,7 +716,7 @@ public class CFLintAnalyzer {
         
         if (failureRate > errorThreshold) {
             String message = String.format(
-                "CFLint analysis failure rate ({:.1f}%) exceeds configured threshold (%d%%). " +
+                "CFLint analysis failure rate (%.1f%%) exceeds configured threshold (%d%%). " +
                 "Consider reviewing parsing configuration or addressing HTML/CFML structure issues.",
                 failureRate, errorThreshold);
                 
@@ -725,9 +727,9 @@ public class CFLintAnalyzer {
                 logger.warn(message);
             }
         } else if (successRate < parsingMode.getRecommendedErrorThreshold()) {
-            logger.warn("CFLint analysis success rate ({:.1f}%) is below recommended threshold for {} mode ({}%). " +
+            logger.warn("CFLint analysis success rate ({}%) is below recommended threshold for {} mode ({}%). " +
                        "Consider reviewing failed files for common HTML/CFML structure issues.", 
-                       successRate, parsingMode, parsingMode.getRecommendedErrorThreshold());
+                       String.format("%.1f", successRate), parsingMode, parsingMode.getRecommendedErrorThreshold());
         }
     }
     
@@ -738,13 +740,13 @@ public class CFLintAnalyzer {
      */
     private void logSuccessMetrics(double successRate) {
         // Structured logging for monitoring systems
-        logger.info("CFLINT_ANALYSIS_METRICS: totalFiles={}, successfulFiles={}, failedFiles={}, successRate={:.1f}%, " +
+        logger.info("CFLINT_ANALYSIS_METRICS: totalFiles={}, successfulFiles={}, failedFiles={}, successRate={}%, " +
                    "parsingMode={}, legacySupport={}, errorThreshold={}%, " +
                    "parserNullPointerErrors={}, htmlStructureErrors={}, jerichoParserErrors={}",
                    totalFiles, 
                    successfullyParsedFiles, 
                    failedFiles, 
-                   successRate,
+                   String.format("%.1f", successRate),
                    parsingMode,
                    legacySupport,
                    errorThreshold,
