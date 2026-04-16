@@ -352,7 +352,7 @@ jobs:
         restore-keys: ${{ runner.os }}-m2
 
     - name: Build release artifact
-      run: mvn clean package -B
+      run: mvn clean package -B -U
 
     - name: Find JAR file
       id: jar
