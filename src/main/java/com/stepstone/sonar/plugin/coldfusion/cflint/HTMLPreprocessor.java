@@ -256,7 +256,7 @@ public class HTMLPreprocessor {
             if (scriptContent.toLowerCase().contains("<cf")) {
                 String replacement = "<script type=\"text/javascript\">\n//<![CDATA[\n" + 
                                    scriptContent + "\n//]]>\n</script>";
-            matcher.appendReplacement(result, Matcher.quoteReplacement("<" + tagContent + " />"));
+            matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
                 fixCount++;
             }
         }
