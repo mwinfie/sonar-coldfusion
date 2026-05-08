@@ -66,16 +66,13 @@ public class CFLintAnalysisResultImporter {
         long fileSizeMB = file.length() / (1024 * 1024);
         logger.info("CFLint XML file size: {}MB", fileSizeMB);
         
-        // EMERGENCY: Abort if file is massive (indicates CFLint inline include explosion)
-        if (fileSizeMB > 1000) {
-            String errorMsg = String.format(
-                "CRITICAL: CFLint XML file is %dMB! This indicates CFLint ran with inline include processing, " +
-                "generating millions of issues. ABORTING import to prevent hours-long processing. " +
-                "Solution: Check CFLint configuration to disable inline includes, or delete .scannerwork and rerun.", 
-                fileSizeMB
-            );
-            logger.error(errorMsg);
-            throw new IllegalStateException(errorMsg);
+        // Warn if file is very large; the StAX streaming parser handles large files without loading
+        // the full content into memory, so we do not abort - we only abort if the issue count
+        // itself is absurdly high (indicating an inline-include explosion).
+        if (fileSizeMB > 500) {
+            logger.warn("CFLint XML file is {}MB - this is large but will be streamed. " +
+                "If import is slow, consider reducing the number of active CFLint rules " +
+                "or adding sonar.exclusions to skip large generated files.", fileSizeMB);
         }
         
         // Only count issues for reasonably sized files (< 100MB)
