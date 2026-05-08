@@ -377,11 +377,10 @@ public class FallbackAnalyzer {
                 "abbrev=\"%s\">\n" +
                 "  <location file=\"%s\" fileName=\"%s\" function=\"\" " +
                 "column=\"%d\" line=\"%d\" message=\"%s\" variable=\"\">\n" +
-                "    <Expression><![CDATA[%s]]></Expression>\n" +
                 "  </location>\n" +
                 "</issue>\n",
                 issue.getSeverity(),
-                issue.getRuleId(), 
+                issue.getRuleId(),
                 escapeXml(issue.getMessage()),
                 "FALLBACK_ANALYSIS",
                 issue.getRuleId(),
@@ -389,8 +388,7 @@ public class FallbackAnalyzer {
                 escapeXml(Paths.get(issue.getFilePath()).getFileName().toString()),
                 issue.getColumnNumber(),
                 issue.getLineNumber(),
-                escapeXml(issue.getMessage()),
-                escapeXml(issue.getEvidence())
+                escapeXml(issue.getMessage())
             ));
         }
         
